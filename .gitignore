@@ -1,36 +1,45 @@
-# Collection artifacts
-*.pyc
+# Ansible specific ignores
+.ansible/
+
+# Python artifacts
 __pycache__/
+*.pyc
 *.pyo
+*.pyd
 
-# Python virtual environments
-.venv/
+# Dependencies
 venv/
+.venv/
+.env
+.env.local
+*.env.*
 
-# Temporary files
+# Logs and temporary files
+*.log
 *.tmp
 *.swp
-*~
 
-# Editor directories
-.idea/
+# Editors
 .vscode/
-*.sublime-project
-*.sublime-workspace
+.idea/
 
-# OS generated files
+# OS specific
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.DiskDeviceSystemTransaction
-.fseventsd
+Thumbs.db
 
-# Ansible vault
-*.vault
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
 
-# Molecule
-.molecule/
+# CodeGraph
+.codegraph/
 
-# Test artifacts
-test-results/
+# Graphify
+graphify-out/

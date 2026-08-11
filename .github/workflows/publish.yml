@@ -1,0 +1,32 @@
+---
+# Publish collection to Galaxy on version tags
+name: Publish to Galaxy
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tag format
+        run: |
+          [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+
+      - name: Publish collection
+        uses: ansible/collecton-publish-action@v1
+        with:
+          api-token: ${{ secrets.ANSIBLE_GALAXY_API_KEY }}
+          path: .
+
+      # Also build and push tarball as artifact for manual download
+      - name: Build collection artifact
+        run: ansible-galaxy collection build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opscores-umesh_net
+          path: opscores-umesh_net-*.tar.gz
