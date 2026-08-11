@@ -1,0 +1,46 @@
+---
+# Install Docker when missing
+# Reused by preflight role
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/{{ ansible_facts['distribution_lower'] }}/gpg
+    state: present
+  tags: [docker, install]
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}] https://download.docker.com/linux/{{ ansible_facts['distribution_lower'] }} {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+    update_cache: true
+  tags: [docker, install]
+
+- name: Install Docker engine
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+  tags: [docker, install]
+
+- name: Ensure docker service is running and enabled
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+  tags: [docker, install]
+
+- name: Ensure docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true
+  when: ansible_user != 'root'

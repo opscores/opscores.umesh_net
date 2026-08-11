@@ -1,0 +1,183 @@
+---
+# Preflight checks and install - ensure prerequisites for Umesh node deployment
+# Ensures Docker, just, jq, curl, git are installed, started, and repository is ready
+
+# Check OS support
+- name: Validate supported OS
+  ansible.builtin.assert:
+    that:
+      - "ansible_os_family == 'Debian' and
+         (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version in ['24', '26']) or
+         (ansible_distribution == 'Debian' and ansible_distribution_major_version in ['12', '13'])"
+    success_msg: "Supported OS: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
+    failure_msg: "Unsupported OS: {{ ansible_distribution }} {{ ansible_distribution_major_version }}. Only Ubuntu 24/26 and Debian 12/13 are supported."
+  tags: [preflight, validate]
+
+# Docker check
+- name: Check Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_version
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.docker
+  tags: [preflight, docker]
+
+- name: Install Docker if missing
+  ansible.builtin.include_tasks: install_docker.yml
+  when:
+    - preflight_checks.docker
+    - docker_version is failed
+
+- name: Check Docker daemon is running
+  ansible.builtin.command: docker info
+  register: docker_info
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.docker and docker_version is not failed
+  tags: [preflight, docker]
+
+- name: Start Docker daemon if not running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+  when:
+    - preflight_checks.docker
+    - docker_version is not failed
+    - docker_info is failed
+
+- name: Fail if Docker still not available
+  ansible.builtin.fail:
+    msg: "Docker is not installed or not running. Please install Docker manually."
+  when:
+    - preflight_checks.docker
+    - docker_version is failed or docker_info is failed
+
+# just check
+- name: Check 'just' is installed
+  ansible.builtin.command: just --version
+  register: just_version
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.just
+  tags: [preflight, just]
+
+- name: Install 'just' if missing
+  ansible.builtin.apt:
+    name: just
+    state: present
+  when:
+    - preflight_checks.just
+    - just_version is failed
+
+# jq check
+- name: Check jq is installed
+  ansible.builtin.command: jq --version
+  register: jq_version
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.jq
+  tags: [preflight, jq]
+
+- name: Install jq if missing
+  ansible.builtin.apt:
+    name: jq
+    state: present
+  when:
+    - preflight_checks.jq
+    - jq_version is failed
+
+# curl check
+- name: Check curl is installed
+  ansible.builtin.command: curl --version
+  register: curl_version
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.curl
+  tags: [preflight, curl]
+
+- name: Install curl if missing
+  ansible.builtin.apt:
+    name: curl
+    state: present
+  when:
+    - preflight_checks.curl
+    - curl_version is failed
+
+# git check
+- name: Check git is installed
+  ansible.builtin.command: git --version
+  register: git_version
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.git
+  tags: [preflight, git]
+
+- name: Install git if missing
+  ansible.builtin.apt:
+    name: git
+    state: present
+  when:
+    - preflight_checks.git
+    - git_version is failed
+
+# Repository check
+- name: Check node-umesh repository exists
+  ansible.builtin.stat:
+    path: "{{ repo_dest }}"
+  register: repo_dir
+  when: preflight_checks.repository
+  tags: [preflight, repo]
+
+- name: Fail if repository directory is missing
+  ansible.builtin.fail:
+    msg: "Repository directory {{ repo_dest }} not found. Ensure common role has been run to clone the repo."
+  when:
+    - preflight_checks.repository
+    - not repo_dir.stat.exists
+  tags: [preflight, repo]
+
+- name: Check umeshctl binary exists
+  ansible.builtin.stat:
+    path: "{{ repo_dest }}/tools/umeshctl/umeshctl"
+  register: umeshctl_binary
+  when: preflight_checks.repository
+  tags: [preflight, repo]
+
+- name: Fail if umeshctl binary is missing
+  ansible.builtin.fail:
+    msg: "umeshctl binary not found at {{ repo_dest }}/tools/umeshctl/. Run 'just build-cli' in {{ repo_dest }}."
+  when:
+    - preflight_checks.repository
+    - not umeshctl_binary.stat.exists
+  tags: [preflight, repo]
+
+# Docker image check
+- name: Check Docker image is built
+  ansible.builtin.command: "docker image inspect {{ docker_image_tag }}:{{ docker_image_version }}"
+  register: docker_image_check
+  changed_when: false
+  failed_when: false
+  when: preflight_checks.docker
+  tags: [preflight, docker]
+
+- name: Fail if Docker image is not found
+  ansible.builtin.fail:
+    msg: "Docker image {{ docker_image_tag }}:{{ docker_image_version }} not found. Build it with: docker build -t {{ docker_image_tag }}:{{ docker_image_version }} -f Dockerfile . from {{ repo_dest }}."
+  when:
+    - preflight_checks.docker
+    - docker_image_check is failed
+  tags: [preflight, docker]
+
+# Summary
+- name: Show preflight summary
+  ansible.builtin.debug:
+    msg: |
+      Preflight checks completed:
+      Docker version: {{ docker_version.stdout | default('N/A') }}
+      just version: {{ just_version.stdout | default('N/A') }}
+      jq version: {{ jq_version.stdout | default('N/A') }}
+      curl version: {{ curl_version.stdout.split('\n')[0] | default('N/A') }}
+      git version: {{ git_version.stdout | default('N/A') }}
+      Repository: {{ repo_dest }}
+  tags: [preflight, summary]

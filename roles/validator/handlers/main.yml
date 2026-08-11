@@ -1,0 +1,22 @@
+---
+# Validator role handlers
+
+- name: restart validator node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile {{ node_mode }}
+    restart
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: validator_restarted
+
+- name: stop validator node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile {{ node_mode }}
+    down
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: validator_stopped

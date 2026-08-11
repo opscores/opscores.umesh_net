@@ -1,0 +1,15 @@
+---
+# Deploy Sentry node on VPS-2
+# Reference: MINSTART.md section 4
+
+- name: Deploy Sentry Node
+  hosts: sentry
+  become: true
+  gather_facts: true
+
+  vars:
+    validator_node_id: ""
+    validator_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.sentry

@@ -1,0 +1,15 @@
+---
+# Deploy RPC node on VPS-3
+# Reference: MINSTART.md section 5
+
+- name: Deploy RPC Node
+  hosts: rpc
+  become: true
+  gather_facts: true
+
+  vars:
+    sentry_node_id: ""
+    sentry_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.rpc

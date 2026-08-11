@@ -1,0 +1,60 @@
+---
+# Common tasks for all Umesh node types
+# Covers sections 2.1 - 2.5 from MINSTART.md
+# Only supports Ubuntu 24/26 and Debian 12/13
+
+- name: Validate supported OS
+  ansible.builtin.assert:
+    that:
+      - "ansible_os_family == 'Debian' and
+         (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version in ['24', '26']) or
+         (ansible_distribution == 'Debian' and ansible_distribution_major_version in ['12', '13'])"
+    success_msg: "Supported OS: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
+    failure_msg: "Unsupported OS: {{ ansible_distribution }} {{ ansible_distribution_major_version }}. Only Ubuntu 24/26 and Debian 12/13 are supported."
+  tags: [preflight, validate]
+
+# Clone repository (section 2.2)
+# Note: Docker installation is handled by the preflight role
+- name: Ensure repository destination directory exists
+  ansible.builtin.file:
+    path: "{{ repo_dest | dirname }}"
+    state: directory
+    mode: '0755'
+  tags: [repo, install]
+
+- name: Clone node-umesh repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
+    version: "{{ repo_branch }}"
+    force: true
+    update: true
+  tags: [repo, install]
+
+- name: Get current commit hash for build
+  ansible.builtin.command: "git -C {{ repo_dest }} rev-parse --short HEAD"
+  register: git_commit_hash
+  changed_when: false
+  tags: [repo, build]
+
+# Build Docker image (section 2.4)
+- name: Build Docker image
+  ansible.builtin.command: >
+    docker build
+    --build-arg VERSION={{ docker_image_version }}
+    --build-arg COMMIT={{ git_commit_hash.stdout }}
+    -t {{ docker_image_tag }}:{{ docker_image_version }}
+    -f Dockerfile .
+  args:
+    chdir: "{{ repo_dest }}"
+  tags: [build, docker]
+  changed_when: true
+
+# Build umeshctl (section 2.5)
+- name: Build umeshctl CLI tool
+  ansible.builtin.command: just build-cli
+  args:
+    chdir: "{{ repo_dest }}"
+  register: build_cli_result
+  changed_when: true
+  tags: [build, cli]

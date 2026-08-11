@@ -1,0 +1,85 @@
+---
+# Sentry role tasks
+# Covers sections 4.1 - 4.2 from MINSTART.md
+
+# Include common setup
+- name: Include common node setup
+  ansible.builtin.include_role:
+    name: opscores.umesh_net.common
+  tags: [common]
+
+# Configure firewall for Sentry (section 2.3 - VPS-2)
+- name: Set UFW default deny incoming for sentry
+  ansible.builtin.ufw:
+    direction: "incoming"
+    policy: deny
+
+- name: Set UFW default allow outgoing
+  ansible.builtin.ufw:
+    direction: "outgoing"
+    policy: allow
+
+- name: Configure UFW rules for sentry
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ firewall_ssh_port }}"
+    - "26656"  # P2P
+    - "26657"  # RPC
+    - "1317"   # REST
+    - "9090"   # gRPC
+    - "9091"   # gRPC-gateway
+  when: firewall_enabled
+  tags: [firewall, sentry]
+
+- name: Enable UFW for sentry
+  ansible.builtin.ufw:
+    state: enabled
+  when: firewall_enabled
+  tags: [firewall, sentry]
+
+# Create .env file
+- name: Create .env.sentry file
+  ansible.builtin.template:
+    src: .env.sentry.j2
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  tags: [config, sentry]
+
+# Initialize Sentry (section 4.1)
+- name: Initialize sentry node
+  ansible.builtin.command: >
+    {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+    --role sentry
+    --env-file {{ env_file_dest }}
+  args:
+    chdir: "{{ repo_dest }}"
+  register: sentry_init
+  changed_when: true
+  tags: [init, sentry]
+
+# Launch sentry
+- name: Launch sentry node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile sentry
+    up -d
+  args:
+    chdir: "{{ repo_dest }}"
+  register: sentry_start
+  changed_when: true
+  tags: [start, sentry]
+
+- name: Check sentry peer count
+  ansible.builtin.shell: >
+    curl -s http://localhost:26657/net_info | jq '.result.n_peers'
+  register: peer_count
+  changed_when: false
+  tags: [check, sentry]
+
+- name: Display peer count
+  ansible.builtin.debug:
+    var: peer_count.stdout

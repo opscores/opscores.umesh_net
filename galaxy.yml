@@ -1,0 +1,17 @@
+namespace: opscores
+name: umesh_net
+version: 1.0.0
+readme: README.md
+authors:
+  - drakon
+description: Ansible collection for deploying Umesh blockchain node topology (Validator + Sentry + RPC)
+license: MIT
+tags:
+  - blockchain
+  - tendermint
+  - cosmos
+  - umesh
+dependencies: {}
+repository: https://github.com/opscores/ansible-umesh-net
+issues: https://github.com/opscores/ansible-umesh-net/issues
+documentation: https://github.com/opscores/ansible-umesh-net/blob/main/README.md

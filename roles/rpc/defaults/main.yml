@@ -1,0 +1,39 @@
+---
+# RPC role defaults
+# Corresponds to .env.rpc from MINSTART.md section 6.3
+
+node_mode: rpc
+chain_id: umesh-testnet-1
+denom: uumesh
+min_gas_price: "0.0025"
+moniker: my-rpc
+
+# Network settings
+genesis_url: ""
+persistent_peers: ""
+rpc_upstream: ""
+rest_upstream: ""
+p2p_upstream: ""
+
+# Keys
+keyring_password: change-me-secure
+
+# Bind IPs
+rpc_p2p_bind_ip: 0.0.0.0
+rpc_rpc_bind_ip: 0.0.0.0
+
+# Resource limits
+cpu_limit_rpc: "2.0"
+memory_limit_rpc: 8g
+memory_reservation_rpc: 4g
+
+# Data directory
+data_dir: data-rpc
+data_path: "{{ repo_dest }}/{{ data_dir }}"
+
+# Environment file
+env_file_dest: "{{ repo_dest }}/.env.rpc"
+
+# Sentry node info
+sentry_node_id: ""
+sentry_ip: ""

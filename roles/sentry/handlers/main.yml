@@ -1,0 +1,22 @@
+---
+# Sentry role handlers
+
+- name: restart sentry node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile sentry
+    restart
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: sentry_restarted
+
+- name: stop sentry node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile sentry
+    down
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: sentry_stopped

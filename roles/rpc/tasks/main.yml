@@ -1,0 +1,83 @@
+---
+# RPC role tasks
+# Covers sections 5.1 - 5.2 from MINSTART.md
+
+# Include common setup
+- name: Include common node setup
+  ansible.builtin.include_role:
+    name: opscores.umesh_net.common
+  tags: [common]
+
+# Configure firewall for RPC (section 2.3 - VPS-3)
+- name: Set UFW default deny incoming for RPC
+  ansible.builtin.ufw:
+    direction: "incoming"
+    policy: deny
+
+- name: Set UFW default allow outgoing
+  ansible.builtin.ufw:
+    direction: "outgoing"
+    policy: allow
+
+- name: Configure UFW rules for RPC node
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ firewall_ssh_port }}"
+    - "26657"  # RPC
+    - "1317"   # REST
+    - "9090"   # gRPC
+    - "9091"   # gRPC-gateway
+  when: firewall_enabled
+  tags: [firewall, rpc]
+
+- name: Enable UFW for RPC node
+  ansible.builtin.ufw:
+    state: enabled
+  when: firewall_enabled
+  tags: [firewall, rpc]
+
+# Create .env file
+- name: Create .env.rpc file from template
+  ansible.builtin.template:
+    src: .env.rpc.j2
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  tags: [config, rpc]
+
+# Initialize RPC (section 5.1)
+- name: Initialize RPC node
+  ansible.builtin.command: >
+    {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+    --role rpc
+    --env-file {{ env_file_dest }}
+  args:
+    chdir: "{{ repo_dest }}"
+  register: rpc_init
+  changed_when: true
+  tags: [init, rpc]
+
+# Launch RPC (section 5.2)
+- name: Launch RPC node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile rpc
+    up -d
+  args:
+    chdir: "{{ repo_dest }}"
+  register: rpc_start
+  changed_when: true
+  tags: [start, rpc]
+
+- name: Check RPC health
+  ansible.builtin.shell: curl -s http://localhost:26657/health
+  register: rpc_health
+  changed_when: false
+  tags: [check, rpc]
+
+- name: Display RPC health
+  ansible.builtin.debug:
+    var: rpc_health.stdout

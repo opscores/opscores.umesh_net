@@ -1,0 +1,52 @@
+---
+# Verification playbook for Umesh node deployment
+# Reference: MINSTART.md section 8
+
+- name: Verify node deployment
+  hosts: all
+  become: false
+  gather_facts: false
+
+  vars:
+    validator_mode: "{{ hostvars[inventory_hostname].validator_mode | default('genesis') }}"
+
+  tasks:
+    - name: Check node sync status
+      ansible.builtin.shell: >
+        curl -s http://localhost:26657/status | jq '.result.sync_info'
+      register: sync_status
+      changed_when: false
+      tags: [verify, sync]
+
+    - name: Check peer count
+      ansible.builtin.shell: >
+        curl -s http://localhost:26657/net_info | jq '.result.n_peers'
+      register: n_peers
+      changed_when: false
+      tags: [verify, p2p]
+
+    - name: Show verification results
+      ansible.builtin.debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          Sync Info: {{ sync_status.stdout }}
+          Peers: {{ n_peers.stdout }}
+
+    - name: Check validator voting power (validator only)
+      ansible.builtin.shell: >
+        curl -s http://localhost:26657/status | jq '.result.validator_info'
+      register: validator_info
+      changed_when: false
+      when: "'validator' in group_names"
+      tags: [verify, validator]
+
+    - name: Show validator info
+      ansible.builtin.debug:
+        var: validator_info.stdout
+      when: "'validator' in group_names"
+
+    - name: Show validator mode
+      ansible.builtin.debug:
+        msg: "Validator mode: {{ validator_mode }}"
+      when: "'validator' in group_names"
+      tags: [verify, debug]

@@ -1,0 +1,22 @@
+---
+# RPC role handlers
+
+- name: restart rpc node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile rpc
+    restart
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: rpc_restarted
+
+- name: stop rpc node
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile rpc
+    down
+  args:
+    chdir: "{{ repo_dest }}"
+  listen: rpc_stopped

@@ -1,0 +1,36 @@
+---
+# Sentry role defaults
+# Corresponds to .env.sentry from MINSTART.md section 6.2
+
+node_mode: sentry
+chain_id: umesh-testnet-1
+denom: uumesh
+min_gas_price: "0.0025"
+moniker: my-sentry
+
+# Network settings
+genesis_url: ""
+persistent_peers: ""
+seeds: ""
+keyring_password: change-me-secure
+
+# Bind IPs
+sentry_p2p_bind_ip: 0.0.0.0
+sentry_rpc_bind_ip: 0.0.0.0
+sentry_dc_bind_ip: 127.0.0.1
+
+# Resource limits
+cpu_limit_sentry: "2.0"
+memory_limit_sentry: 8g
+memory_reservation_sentry: 4g
+
+# Data directory
+data_dir: data-sentry
+data_path: "{{ repo_dest }}/{{ data_dir }}"
+
+# Environment file
+env_file_dest: "{{ repo_dest }}/.env.sentry"
+
+# Validator peer info (to connect back to validator)
+validator_node_id: ""
+validator_ip: ""

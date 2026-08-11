@@ -1,0 +1,21 @@
+---
+# Common variables for all Umesh node deployments
+# Defaults for roles/common
+
+# Supported OS: Ubuntu 24/26, Debian 12/13
+supported_os:
+  - { name: 'Ubuntu', versions: ['24', '26'] }
+  - { name: 'Debian', versions: ['12', '13'] }
+
+# Docker
+docker_image_tag: umesh-node
+docker_image_version: dev
+
+# Firewall
+firewall_enabled: true
+firewall_ssh_port: 22
+
+# Repository
+repo_url: https://github.com/opscores/node-umesh.git
+repo_branch: dev
+repo_dest: /opt/node-umesh

@@ -1,0 +1,12 @@
+---
+# Common handlers
+
+- name: docker daemon reload
+  ansible.builtin.service:
+    name: docker
+    state: reloaded
+
+- name: restart ufw
+  ansible.builtin.service:
+    name: ufw
+    state: restarted

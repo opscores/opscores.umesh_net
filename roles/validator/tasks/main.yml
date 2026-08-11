@@ -1,0 +1,156 @@
+---
+# Validator role tasks
+# Covers sections 3.1 - 3.3 from MINSTART.md
+# Supports two modes:
+#   - genesis: Create new chain (run genesis plan)
+#   - join: Join existing chain (download genesis, connect to peers)
+
+# Include common setup
+- name: Include common node setup
+  ansible.builtin.include_role:
+    name: opscores.umesh_net.common
+  tags: [common]
+
+# Include preflight checks
+- name: Include preflight checks
+  ansible.builtin.include_role:
+    name: opscores.umesh_net.preflight
+  tags: [preflight]
+
+# Configure firewall for Validator (section 2.3 - VPS-1)
+- name: Set UFW default deny incoming for validator
+  ansible.builtin.ufw:
+    direction: "incoming"
+    policy: deny
+  tags: [firewall, validator]
+
+- name: Set UFW default allow outgoing
+  ansible.builtin.ufw:
+    direction: "outgoing"
+    policy: allow
+  tags: [firewall, validator]
+
+- name: Allow SSH via UFW
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ firewall_ssh_port }}"
+    proto: tcp
+  when: firewall_enabled
+  tags: [firewall, validator]
+
+- name: Allow P2P from sentinel via UFW (validator mode)
+  ansible.builtin.ufw:
+    rule: allow
+    port: "26656"
+    proto: tcp
+    src: "{{ sentinel_ip }}"
+  when:
+    - firewall_enabled
+    - sentinel_ip is defined
+  tags: [firewall, validator]
+
+- name: Enable UFW firewall
+  ansible.builtin.ufw:
+    state: enabled
+    rule: allow
+    port: "{{ firewall_ssh_port }}/tcp"
+  when: firewall_enabled
+  tags: [firewall, validator]
+
+# Create .env file
+- name: Create .env file from template
+  ansible.builtin.template:
+    src: "{{ env_file_src }}"
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  tags: [config, validator]
+
+# Genesis mode: Run genesis plan (section 3.1)
+- name: Run genesis plan setup (genesis mode)
+  ansible.builtin.command: >
+    {{ repo_dest }}/tools/umeshctl/umeshctl setup plan
+    --config {{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml
+    --env-file {{ env_file_dest }}
+  args:
+    chdir: "{{ repo_dest }}"
+  register: genesis_result
+  changed_when: true
+  when: validator_mode == 'genesis'
+  tags: [genesis, validator]
+
+- name: Show genesis plan output
+  ansible.builtin.debug:
+    var: genesis_result.stdout_lines
+  when: validator_mode == 'genesis'
+  tags: [genesis, validator, debug]
+
+# Join mode: Download genesis and prepare for join
+- name: Download genesis.json (join mode)
+  ansible.builtin.get_url:
+    url: "{{ join_genesis_url }}"
+    dest: "{{ data_path }}/config/genesis.json"
+    mode: '0644'
+  register: genesis_download
+  changed_when: true
+  when: validator_mode == 'join' and join_genesis_url != ""
+  tags: [join, validator]
+
+- name: Validate downloaded genesis
+  ansible.builtin.file:
+    path: "{{ data_path }}/config/genesis.json"
+    state: file
+  when: validator_mode == 'join'
+  tags: [join, validator]
+
+# Set persistent peers for join mode
+- name: Configure persistent peers for join mode
+  ansible.builtin.lineinfile:
+    path: "{{ env_file_dest }}"
+    regexp: '^PERSISTENT_PEERS='
+    line: "PERSISTENT_PEERS=\"{{ persistent_peers_for_join }}\""
+    create: yes
+  when:
+    - validator_mode == 'join'
+    - persistent_peers_for_join != ""
+  tags: [config, join]
+
+# Launch validator
+- name: Launch validator node with docker compose
+  ansible.builtin.command: >
+    docker compose
+    --env-file {{ env_file_dest }}
+    --profile {{ node_mode }}
+    up -d
+  args:
+    chdir: "{{ repo_dest }}"
+  register: validator_start
+  changed_when: true
+  tags: [start, validator]
+
+- name: Show validator startup logs
+  ansible.builtin.shell: docker logs -n 50 umesh-validator
+  register: validator_logs
+  changed_when: false
+  tags: [debug, validator]
+
+- name: Display startup logs
+  ansible.builtin.debug:
+    var: validator_logs.stdout_lines
+  when: validator_logs.stdout | length > 0
+
+# Verify validator node
+- name: Wait for validator RPC to be available
+  ansible.builtin.uri:
+    url: "http://{{ validator_rpc_bind_ip }}:26657/status"
+    method: GET
+    return_content: true
+    timeout: 10
+  register: validator_status
+  retries: 10
+  delay: 5
+  until: "'latest_block_height' in validator_status.content"
+  tags: [check, validator]
+
+- name: Show validator status
+  ansible.builtin.debug:
+    var: validator_status.content

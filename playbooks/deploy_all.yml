@@ -1,0 +1,22 @@
+---
+# Deploy all three nodes: Validator, Sentry, RPC
+# Reference: MINSTART.md section 7 - Docker Compose
+
+- name: Deploy full topology (Validator + Sentry + RPC)
+  hosts: all
+  become: true
+  gather_facts: true
+  serial:
+    - 1  # Validator first
+    - 1  # Sentry second
+    - 1  # RPC last
+
+  pre_tasks:
+    - name: Debug - show current host
+      ansible.builtin.debug:
+        msg: "Deploying to {{ inventory_hostname }} (node_type={{ node_type }})"
+
+  roles:
+    - role: opscores.umesh_net.common
+    - role: opscores.umesh_net.{{ node_type }}
+      when: node_type in ['validator', 'sentry', 'rpc']

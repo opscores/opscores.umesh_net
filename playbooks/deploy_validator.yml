@@ -1,0 +1,15 @@
+---
+# Deploy Validator node on VPS-1
+# Reference: MINSTART.md section 3
+
+- name: Deploy Validator Node
+  hosts: validator
+  become: true
+  gather_facts: true
+
+  vars:
+    # Set these vars per deployment
+    sentinel_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.validator

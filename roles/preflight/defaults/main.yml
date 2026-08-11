@@ -1,0 +1,11 @@
+---
+# Preflight checks defaults
+# Verifies prerequisites and installs missing packages if needed
+
+preflight_checks:
+  docker: true
+  just: true
+  jq: true
+  curl: true
+  git: true
+  repository: true
