@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  role_name: rpc
+  namespace: opscores
+  author: opscores
+  description: Deploy RPC node for Umesh blockchain
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "24.04"
+        - "26.04"
+    - name: Debian
+      versions:
+        - "13"
+  galaxy_tags:
+    - rpc
+    - blockchain
+    - cosmos
+    - tendermint
+  dependencies:
+    - role: opscores.umesh_net.common
+    - role: opscores.umesh_net.preflight

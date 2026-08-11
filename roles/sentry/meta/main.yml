@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  role_name: sentry
+  namespace: opscores
+  author: opscores
+  description: Deploy Sentry node for Umesh blockchain
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "24.04"
+        - "26.04"
+    - name: Debian
+      versions:
+        - "13"
+  galaxy_tags:
+    - sentry
+    - blockchain
+    - cosmos
+    - tendermint
+  dependencies:
+    - role: opscores.umesh_net.common
+    - role: opscores.umesh_net.preflight

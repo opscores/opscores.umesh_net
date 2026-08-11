@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: preflight
+  namespace: opscores
+  author: opscores
+  description: Pre-flight checks and prerequisite installation for Umesh nodes
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "24.04"
+        - "26.04"
+    - name: Debian
+      versions:
+        - "13"
+  galaxy_tags:
+    - preflight
+    - validation
+    - docker
+    - setup
+  dependencies: []

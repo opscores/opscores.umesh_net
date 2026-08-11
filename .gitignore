@@ -1,0 +1,36 @@
+# Collection artifacts
+*.pyc
+__pycache__/
+*.pyo
+
+# Python virtual environments
+.venv/
+venv/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.DiskDeviceSystemTransaction
+.fseventsd
+
+# Ansible vault
+*.vault
+
+# Molecule
+.molecule/
+
+# Test artifacts
+test-results/
