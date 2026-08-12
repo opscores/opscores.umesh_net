@@ -1,0 +1,56 @@
+---
+# Backup role for Umesh node keys
+# Creates backups of validator and sentry key files
+
+# Create backup directory
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0700'
+  tags: [backup, setup]
+
+# Backup validator keys (priv_validator_key.json and node_key.json)
+- name: Backup validator keys
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-{{ item | basename }}"
+    remote_src: yes
+  loop:
+    - "{{ data_path }}/config/priv_validator_key.json"
+    - "{{ data_path }}/config/node_key.json"
+  when: umesh_role == 'validator' or umesh_role == 'genesis'
+  tags: [backup, keys]
+
+# Backup sentry keys
+- name: Backup sentry keys
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-{{ item | basename }}"
+    remote_src: yes
+  loop:
+    - "{{ data_path }}/config/priv_validator_key.json"
+    - "{{ data_path }}/config/node_key.json"
+  when: umesh_role == 'sentry'
+  tags: [backup, keys]
+
+# Backup RPC configuration
+- name: Backup RPC configuration
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-rpc-config-{{ item | basename }}"
+    remote_src: yes
+  loop:
+    - "{{ data_path }}/config/config.toml"
+    - "{{ data_path }}/config/app.toml"
+  when: umesh_role == 'rpc'
+  tags: [backup, config]
+
+# Compress backup directory
+- name: Compress backup directory
+  ansible.builtin.command: >
+    tar -czf "{{ backup_dir }}.tar.gz"
+    -C {{ backup_dir | dirname }} {{ backup_dir | basename }}
+  args:
+    creates: "{{ backup_dir }}.tar.gz"
+  tags: [backup, compress]

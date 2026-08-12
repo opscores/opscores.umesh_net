@@ -54,32 +54,7 @@
   when: firewall_enabled
   tags: [firewall, validator]
 
-# Check if already initialized
-- name: Check if validator is already initialized
-  ansible.builtin.stat:
-    path: "{{ data_path }}/config/genesis.json"
-  register: genesis_check
-  tags: [init, validator]
-
-# Initialize validator node (only if not exists)
-- name: Initialize validator node (join mode)
-  ansible.builtin.command: >
-    {{ repo_dest }}/tools/umeshctl/umeshctl setup init
-    --role join
-    --env-file {{ env_file_dest }}
-  args:
-    chdir: "{{ repo_dest }}"
-  when: not genesis_check.stat.exists
-  register: validator_init
-  changed_when: validator_init.rc == 0
-  tags: [init, validator]
-
-- name: Show init output
-  ansible.builtin.debug:
-    var: validator_init.stdout_lines
-  tags: [init, debug]
-
-# Create .env file
+# Create .env file (BEFORE initialization!)
 - name: Create .env.validator file from template
   ansible.builtin.template:
     src: .env.validator.j2
@@ -88,37 +63,69 @@
   notify: "restart validator node"
   tags: [config, validator]
 
-# Check if container is already running
-- name: Check if validator container is running
-  ansible.builtin.command: docker ps -q -f name=umesh-validator
-  register: container_check
-  changed_when: false
-  tags: [start, validator]
+# Wrapped initialization and launch with error handling
+- name: Initialize and launch validator
+  block:
+    - name: Check if validator is already initialized
+      ansible.builtin.stat:
+        path: "{{ data_path }}/config/genesis.json"
+      register: genesis_check
+      tags: [init, validator]
 
-# Launch validator node (only if not running)
-- name: Launch validator node with docker compose
-  ansible.builtin.command: >
-    docker compose
-    --env-file {{ env_file_dest }}
-    --profile validator
-    up -d
-  args:
-    chdir: "{{ repo_dest }}"
-  when: container_check.stdout | length == 0
-  register: validator_start
-  changed_when: validator_start.rc == 0
-  tags: [start, validator]
+    - name: Initialize validator node (join mode)
+      ansible.builtin.command: >
+        {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+        --role join
+        --env-file {{ env_file_dest }}
+      args:
+        chdir: "{{ repo_dest }}"
+      when: not genesis_check.stat.exists
+      register: validator_init
+      changed_when: validator_init.rc == 0
+      tags: [init, validator]
 
-- name: Show validator startup logs
-  ansible.builtin.shell: docker logs -n 50 umesh-validator
-  register: validator_logs
-  changed_when: false
-  tags: [debug, validator]
+    - name: Check if validator container is running
+      ansible.builtin.command: docker ps -q -f name=umesh-validator
+      register: container_check
+      changed_when: false
+      tags: [start, validator]
+
+    - name: Launch validator node with docker compose
+      ansible.builtin.command: >
+        docker compose
+        --env-file {{ env_file_dest }}
+        --profile validator
+        up -d
+      args:
+        chdir: "{{ repo_dest }}"
+      when: container_check.stdout | length == 0
+      register: validator_start
+      changed_when: validator_start.rc == 0
+      tags: [start, validator]
+
+    - name: Show validator startup logs
+      ansible.builtin.shell: docker logs -n 50 umesh-validator
+      register: validator_logs
+      changed_when: false
+      tags: [debug, validator]
+
+  rescue:
+    - name: Cleanup failed initialization
+      file:
+        path: "{{ data_path }}"
+        state: absent
+      tags: [cleanup, validator]
+
+    - name: Fail with error message
+      ansible.builtin.fail:
+        msg: "Validator initialization failed. Data directory {{ data_path }} has been cleaned up."
+      tags: [error, validator]
 
 - name: Display startup logs
   ansible.builtin.debug:
     var: validator_logs.stdout_lines
   when: validator_logs.stdout | length > 0
+  tags: [debug, validator]
 
 # Verify validator node
 - name: Wait for validator RPC to be available

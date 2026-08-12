@@ -25,13 +25,6 @@
       changed_when: false
       tags: [verify, p2p]
 
-    - name: Show verification results
-      ansible.builtin.debug:
-        msg: |
-          Host: {{ inventory_hostname }}
-          Sync Info: {{ sync_status.stdout }}
-          Peers: {{ n_peers.stdout }}
-
     - name: Check validator voting power (validator only)
       ansible.builtin.shell: >
         curl -s http://localhost:26657/status | jq '.result.validator_info'
@@ -40,10 +33,29 @@
       when: "'validator' in group_names"
       tags: [verify, validator]
 
-    - name: Show validator info
+    - name: Show verification results
       ansible.builtin.debug:
-        var: validator_info.stdout
-      when: "'validator' in group_names"
+        msg: |
+          Host: {{ inventory_hostname }}
+          Validator Mode: {{ validator_mode }}
+          Sync Info: {{ sync_status.stdout }}
+          Catching Up: {{ sync_status.stdout | from_json .result.sync_info.catching_up | bool }}
+          Peers: {{ n_peers.stdout }}
+          Voting Power: {{ validator_info.stdout | from_json .result.validator_info.voting_power | default('N/A') }}
+      tags: [verify, results]
+
+    - name: Assert node is healthy
+      ansible.builtin.assert:
+        that:
+          - sync_status.stdout | from_json .result.sync_info.catching_up == false
+          - n_peers.stdout | int > 0
+          - validator_info.stdout | from_json .result.validator_info.voting_power | default(0) | int > 0
+        fail_msg: |
+          Node health check failed:
+          - Catching up: {{ sync_status.stdout | from_json .result.sync_info.catching_up }}
+          - Peer count: {{ n_peers.stdout }}
+          - Voting power: {{ validator_info.stdout | from_json .result.validator_info.voting_power | default('N/A') }}
+        tags: [verify, assert]
 
     - name: Show validator mode
       ansible.builtin.debug:

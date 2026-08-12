@@ -37,24 +37,42 @@
   changed_when: false
   tags: [repo, build]
 
-# Build Docker image (section 2.4)
-- name: Build Docker image
+# Check if Dockerfile or build args changed (section 2.4)
+- name: Check if Dockerfile changed
+  ansible.builtin.stat:
+    path: "{{ repo_dest }}/Dockerfile"
+  register: dockerfile_stat
+
+- name: Get Docker image digest (if exists)
+  ansible.builtin.command: >
+    docker images -q {{ docker_image_tag }}:{{ docker_image_version }} 2>/dev/null
+  register: docker_image_exists
+  changed_when: false
+
+- name: Build Docker image (only if changed)
   ansible.builtin.command: >
     docker build
     --build-arg VERSION={{ docker_image_version }}
     --build-arg COMMIT={{ git_commit_hash.stdout }}
     -t {{ docker_image_tag }}:{{ docker_image_version }}
     -f Dockerfile .
-  args:
-    chdir: "{{ repo_dest }}"
+    args:
+      chdir: "{{ repo_dest }}"
   tags: [build, docker]
-  changed_when: true
+  when: dockerfile_stat.stat.mtime > (now - 86400).timestamp or not docker_image_exists.stdout | length > 0
+  register: docker_build_result
 
-# Build umeshctl (section 2.5)
-- name: Build umeshctl CLI tool
+- name: Record Docker build timestamp
+  ansible.builtin.lineinfile:
+    path: "{{ repo_dest }}/.docker-build-timestamp"
+    line: "{{ now }}"
+    create: yes
+  when: docker_build_result is changed
+
+- name: Build umeshctl CLI tool (section 2.5)
   ansible.builtin.command: just build-cli
   args:
     chdir: "{{ repo_dest }}"
   register: build_cli_result
-  changed_when: true
+  changed_when: build_cli_result is changed
   tags: [build, cli]

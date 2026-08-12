@@ -1,0 +1,20 @@
+---
+# Backup role variables
+# These are not meant to be overridden by users
+
+# Dynamically determined paths
+# data_path and env_file_dest are set by the including role
+backup_dir: "{{ backup_dir_base }}/{{ ansible_date_time.iso8601_basic_short }}"
+
+# Key files to backup per role type
+validator_keys:
+    - "priv_validator_key.json"
+    - "node_key.json"
+
+sentry_keys:
+    - "priv_validator_key.json"
+    - "node_key.json"
+
+rpc_configs:
+    - "config.toml"
+    - "app.toml"

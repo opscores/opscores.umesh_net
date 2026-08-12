@@ -5,8 +5,16 @@
 node_mode: sentry
 chain_id: umesh-testnet-1
 denom: uumesh
-min_gas_price: "0.0025"
-moniker: my-sentry
+min_gas_price: "0.0025uumesh"
+
+# Cosmos SDK / WasmVM settings
+wasm_memory_cache_size: 1024      # MiB
+wasm_simulation_gas_limit: 50000000 # Gas limit for simulation
+
+# Pruning settings
+pruning_strategy: "custom"
+pruning_keep_recent: 1000
+pruning_interval: 100
 
 # Network settings
 genesis_url: ""

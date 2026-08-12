@@ -1,0 +1,15 @@
+---
+# Backup role defaults
+# Configuration for key backups
+
+# Backup directory base path
+backup_dir_base: "/opt/umesh-backups"
+
+# Backup retention (number of backups to keep)
+backup_retention: 7
+
+# Roles that should backup keys
+backup_roles:
+  - "validator"
+  - "sentry"
+  - "genesis"

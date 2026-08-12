@@ -7,8 +7,16 @@ node_mode: validator
 # Chain parameters - these can be overridden by user
 chain_id: umesh-testnet-1
 denom: uumesh
-min_gas_price: "0.0025"
-moniker: my-validator
+min_gas_price: "0.0025uumesh"
+
+# Cosmos SDK / WasmVM settings
+wasm_memory_cache_size: 1024      # MiB
+wasm_simulation_gas_limit: 50000000 # Gas limit for simulation
+
+# Pruning settings
+pruning_strategy: "custom"
+pruning_keep_recent: 1000
+pruning_interval: 100
 
 # Join parameters
 join_genesis_url: ""
@@ -26,6 +34,10 @@ keyring_password: change-me-secure
 # Network settings - these can be overridden by user
 validator_p2p_bind_ip: 0.0.0.0
 validator_rpc_bind_ip: 127.0.0.1
+
+# P2P settings
+p2p_max_inbound_peers: 50
+p2p_max_outbound_peers: 10
 
 # Resource limits - these can be overridden by user
 cpu_limit: "2.0"

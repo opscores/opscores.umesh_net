@@ -39,57 +39,7 @@
   when: firewall_enabled
   tags: [firewall, rpc]
 
-# Check if already initialized
-- name: Check if RPC is already initialized
-  ansible.builtin.stat:
-    path: "{{ data_path }}/config/genesis.json"
-  register: genesis_check
-  tags: [init, rpc]
-
-# Initialize RPC node (only if not exists)
-- name: Initialize RPC node
-  ansible.builtin.command: >
-    {{ repo_dest }}/tools/umeshctl/umeshctl setup init
-    --role rpc
-    --env-file {{ env_file_dest }}
-  args:
-    chdir: "{{ repo_dest }}"
-  when: not genesis_check.stat.exists
-  register: rpc_init
-  changed_when: rpc_init.rc == 0
-  tags: [init, rpc]
-
-# Launch RPC (only if not running)
-- name: Check if RPC container is running
-  ansible.builtin.command: docker ps -q -f name=umesh-rpc
-  register: container_check
-  changed_when: false
-  tags: [start, rpc]
-
-- name: Launch RPC node with docker compose
-  ansible.builtin.command: >
-    docker compose
-    --env-file {{ env_file_dest }}
-    --profile rpc
-    up -d
-  args:
-    chdir: "{{ repo_dest }}"
-  when: container_check.stdout | length == 0
-  register: rpc_start
-  changed_when: rpc_start.rc == 0
-  tags: [start, rpc]
-
-- name: Check RPC health
-  ansible.builtin.shell: curl -s http://localhost:26657/health
-  register: rpc_health
-  changed_when: false
-  tags: [check, rpc]
-
-- name: Display RPC health
-  ansible.builtin.debug:
-    var: rpc_health.stdout
-
-# Create .env file
+# Create .env file (BEFORE initialization!)
 - name: Create .env.rpc file from template
   ansible.builtin.template:
     src: .env.rpc.j2
@@ -97,3 +47,65 @@
     mode: '0600'
   notify: "restart rpc node"
   tags: [config, rpc]
+
+# Wrapped initialization and launch with error handling
+- name: Initialize and launch RPC
+  block:
+    - name: Check if RPC is already initialized
+      ansible.builtin.stat:
+        path: "{{ data_path }}/config/genesis.json"
+      register: genesis_check
+      tags: [init, rpc]
+
+    - name: Initialize RPC node
+      ansible.builtin.command: >
+        {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+        --role rpc
+        --env-file {{ env_file_dest }}
+      args:
+        chdir: "{{ repo_dest }}"
+      when: not genesis_check.stat.exists
+      register: rpc_init
+      changed_when: rpc_init.rc == 0
+      tags: [init, rpc]
+
+    - name: Check if RPC container is running
+      ansible.builtin.command: docker ps -q -f name=umesh-rpc
+      register: container_check
+      changed_when: false
+      tags: [start, rpc]
+
+    - name: Launch RPC node with docker compose
+      ansible.builtin.command: >
+        docker compose
+        --env-file {{ env_file_dest }}
+        --profile rpc
+        up -d
+      args:
+        chdir: "{{ repo_dest }}"
+      when: container_check.stdout | length == 0
+      register: rpc_start
+      changed_when: rpc_start.rc == 0
+      tags: [start, rpc]
+
+    - name: Check RPC health
+      ansible.builtin.shell: curl -s http://localhost:26657/health
+      register: rpc_health
+      changed_when: false
+      tags: [check, rpc]
+  rescue:
+    - name: Cleanup failed initialization
+      file:
+        path: "{{ data_path }}"
+        state: absent
+      tags: [cleanup, rpc]
+
+    - name: Fail with error message
+      ansible.builtin.fail:
+        msg: "RPC initialization failed. Data directory {{ data_path }} has been cleaned up."
+      tags: [error, rpc]
+  tags: [init, rpc]
+
+- name: Display RPC health
+  ansible.builtin.debug:
+    var: rpc_health.stdout
