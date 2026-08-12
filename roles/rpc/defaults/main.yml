@@ -1,6 +1,6 @@
 ---
 # RPC role defaults
-# Corresponds to .env.rpc from MINSTART.md section 6.3
+# Public RPC node
 
 node_mode: rpc
 chain_id: umesh-testnet-1
@@ -10,13 +10,15 @@ moniker: my-rpc
 
 # Network settings
 genesis_url: ""
+genesis_sha256: ""
+public_rpc_fallback: ""
 persistent_peers: ""
+seeds: ""
+
+# Upstream RPC settings
 rpc_upstream: ""
 rest_upstream: ""
 p2p_upstream: ""
-
-# Keys
-keyring_password: change-me-secure
 
 # Bind IPs
 rpc_p2p_bind_ip: 0.0.0.0
@@ -26,6 +28,9 @@ rpc_rpc_bind_ip: 0.0.0.0
 cpu_limit_rpc: "2.0"
 memory_limit_rpc: 8g
 memory_reservation_rpc: 4g
+
+# OTEL settings
+environment: production
 
 # Data directory
 data_dir: data-rpc

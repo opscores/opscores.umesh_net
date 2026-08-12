@@ -32,6 +32,9 @@ cpu_limit: "2.0"
 memory_limit: 4g
 memory_reservation: 2g
 
+# OTEL settings
+environment: production
+
 # Data directory
 data_dir: data-validator
 data_path: "{{ repo_dest }}/{{ data_dir }}"
