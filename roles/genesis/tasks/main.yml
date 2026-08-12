@@ -1,6 +1,6 @@
 ---
-# Validator role tasks
-# Joins an existing blockchain as a validator
+# Genesis role tasks
+# Creates a new blockchain by running genesis plan
 
 # Include common setup
 - name: Include common node setup
@@ -14,18 +14,18 @@
     name: opscores.umesh_net.preflight
   tags: [preflight]
 
-# Configure firewall for Validator
+# Configure firewall for Genesis Validator
 - name: Set UFW default deny incoming
   ansible.builtin.ufw:
     direction: "incoming"
     policy: deny
-  tags: [firewall, validator]
+  tags: [firewall, genesis]
 
 - name: Set UFW default allow outgoing
   ansible.builtin.ufw:
     direction: "outgoing"
     policy: allow
-  tags: [firewall, validator]
+  tags: [firewall, genesis]
 
 - name: Allow SSH via UFW
   ansible.builtin.ufw:
@@ -33,7 +33,7 @@
     port: "{{ firewall_ssh_port }}"
     proto: tcp
   when: firewall_enabled
-  tags: [firewall, validator]
+  tags: [firewall, genesis]
 
 - name: Allow P2P from sentinel via UFW
   ansible.builtin.ufw:
@@ -44,7 +44,7 @@
   when:
     - firewall_enabled
     - sentinel_ip is defined
-  tags: [firewall, validator]
+  tags: [firewall, genesis]
 
 - name: Enable UFW firewall
   ansible.builtin.ufw:
@@ -52,32 +52,32 @@
     rule: allow
     port: "{{ firewall_ssh_port }}/tcp"
   when: firewall_enabled
-  tags: [firewall, validator]
+  tags: [firewall, genesis]
 
 # Create .env file
-- name: Create .env.validator file from template
+- name: Create .env.genesis file from template
   ansible.builtin.template:
-    src: .env.validator.j2
+    src: .env.genesis.j2
     dest: "{{ env_file_dest }}"
     mode: '0600'
-  tags: [config, validator]
+  tags: [config, genesis]
 
-# Initialize validator node (join existing chain)
-- name: Initialize validator node (join mode)
+# Run genesis plan setup
+- name: Run genesis plan setup
   ansible.builtin.command: >
-    {{ repo_dest }}/tools/umeshctl/umeshctl setup init
-    --role join
+    {{ repo_dest }}/tools/umeshctl/umeshctl setup plan
+    --config {{ genesis_plan_config }}
     --env-file {{ env_file_dest }}
   args:
     chdir: "{{ repo_dest }}"
-  register: validator_init
+  register: genesis_result
   changed_when: true
-  tags: [init, validator]
+  tags: [genesis, setup]
 
-- name: Show init output
+- name: Show genesis plan output
   ansible.builtin.debug:
-    var: validator_init.stdout_lines
-  tags: [init, debug]
+    var: genesis_result.stdout_lines
+  tags: [genesis, debug]
 
 # Launch validator node
 - name: Launch validator node with docker compose
@@ -90,13 +90,13 @@
     chdir: "{{ repo_dest }}"
   register: validator_start
   changed_when: true
-  tags: [start, validator]
+  tags: [start, genesis]
 
 - name: Show validator startup logs
   ansible.builtin.shell: docker logs -n 50 umesh-validator
   register: validator_logs
   changed_when: false
-  tags: [debug, validator]
+  tags: [debug, genesis]
 
 - name: Display startup logs
   ansible.builtin.debug:
@@ -114,7 +114,7 @@
   retries: 10
   delay: 5
   until: "'latest_block_height' in validator_status.content"
-  tags: [check, validator]
+  tags: [check, genesis]
 
 - name: Show validator status
   ansible.builtin.debug:

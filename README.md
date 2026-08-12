@@ -1,14 +1,15 @@
 # Umesh Net Ansible Collection
 
-Ansible collection for deploying the **Validator + Sentry + RPC** node topology.
+Ansible collection for deploying the **Genesis + Validator + Sentry + RPC** node topology.
 
 Supports **Ubuntu 24/26** and **Debian 12/13** only.
 
 ## Structure
 
-- `roles/preflight` - Pre-flight checks and installation of all prerequisites (Docker, just, jq, curl, git) before deployment
+- `roles/preflight` - Pre-flight checks and installation of all prerequisites (Docker, just, jq, curl, git)
 - `roles/common` - Common setup tasks shared by all node types (repo clone, Docker image build, umeshctl build)
-- `roles/validator` - Validator node role (private; RPC only on localhost)
+- `roles/genesis` - Genesis validator role (creates a new blockchain)
+- `roles/validator` - Validator role (joins an existing blockchain)
 - `roles/sentry` - Sentry node role (public P2P/RPC gateway for the validator)
 - `roles/rpc` - RPC node role (public access endpoints)
 - `playbooks/` - Ready-to-use deployment playbooks
@@ -31,30 +32,40 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 
 ## Usage
 
-### Single Role Deployment
+### Deploy Genesis (creates a new blockchain)
 
 ```bash
-# Deploy Validator (runs preflight + common + validator roles)
+ansible-playbook opscores.umesh_net.deploy_genesis -i inventory.ini
+```
+
+### Deploy Validator (joins existing blockchain)
+
+```bash
 ansible-playbook opscores.umesh_net.deploy_validator -i inventory.ini
+```
 
-# Deploy Sentry (runs preflight + common + sentry roles)
+### Deploy Sentry
+
+```bash
 ansible-playbook opscores.umesh_net.deploy_sentry -i inventory.ini
+```
 
-# Deploy RPC (runs preflight + common + rpc roles)
+### Deploy RPC
+
+```bash
 ansible-playbook opscores.umesh_net.deploy_rpc -i inventory.ini
 ```
 
 ### Deploy Full Topology
 
 ```bash
-# Deploy all three nodes in order: Validator → Sentry → RPC
+# Deploy all nodes in order: Genesis → Validator → Sentry → RPC
 ansible-playbook opscores.umesh_net.deploy_all -i inventory.ini
 ```
 
 ### Verify Deployment
 
 ```bash
-# Run post-deployment verification checks
 ansible-playbook opscores.umesh_net.verify -i inventory.ini
 ```
 
@@ -75,10 +86,17 @@ ansible-playbook opscores.umesh_net.verify -i inventory.ini
 - Builds the Docker image (`umesh-node:{version}`)
 - Builds `umeshctl` via `just build-cli`
 
+### genesis
+
+- Creates new blockchain via `umeshctl setup plan`
+- Configures validator parameters (commission, stake, moniker)
+- Launches node with `docker compose --profile validator up -d`
+- Verifies block height is increasing
+
 ### validator
 
-- Creates `.env.validator` from Jinja2 template
-- Runs `umeshctl setup plan` (genesis mode) or joins existing chain (join mode)
+- Joins existing blockchain via `umeshctl setup init --role join`
+- Downloads genesis.json from configured source
 - Launches node with `docker compose --profile validator up -d`
 - Verifies block height is increasing
 
@@ -86,7 +104,7 @@ ansible-playbook opscores.umesh_net.verify -i inventory.ini
 
 - Creates `.env.sentry` from Jinja2 template
 - Runs `umeshctl setup init --role sentry`
-- Launces with `docker compose --profile sentry up -d`
+- Launches with `docker compose --profile sentry up -d`
 - Verifies peer count and health
 
 ### rpc
@@ -98,14 +116,13 @@ ansible-playbook opscores.umesh_net.verify -i inventory.ini
 
 ## Inventory Variables
 
-| Variable                 | Role       | Description                            |
-|--------------------------|------------|----------------------------------------|
-| `node_mode`              | validator  | Set to `validator`                     |
-| `validator_mode`         | validator  | `genesis` or `join`                    |
-| `sentinel_ip`            | validator  | IP of sentry peer firewall allows     |
-| `join_genesis_url`       | validator  | Genesis file URL (join mode)           |
-| `persistent_peers_for_join` | validator | Comma-separated peer list (join mode)|
-| `validator_node_id`      | sentry     | Validator P2P node ID                  |
-| `validator_ip`           | sentry     | Validator IP                           |
-| `sentry_node_id`         | rpc        | Sentry P2P node ID                     |
-| `sentry_ip`              | rpc        | Sentry IP                              |
+| Variable                 | Role        | Description                              |
+|--------------------------|-------------|------------------------------------------|
+| `sentinel_ip`            | genesis     | IP of sentry peer for firewall rules     |
+| `genesis_plan_config`    | genesis     | Path to genesis plan YAML config         |
+| `join_genesis_url`       | validator   | Genesis file URL for download            |
+| `persistent_peers_for_join` | validator | Comma-separated peer list               |
+| `validator_node_id`      | sentry      | Validator P2P node ID                    |
+| `validator_ip`           | sentry      | Validator IP                             |
+| `sentry_node_id`         | rpc         | Sentry P2P node ID                       |
+| `sentry_ip`              | rpc         | Sentry IP                                |

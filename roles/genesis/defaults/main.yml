@@ -1,0 +1,40 @@
+---
+# Genesis role defaults
+# Creates a new blockchain by running genesis plan
+
+node_mode: validator
+
+# Chain parameters
+chain_id: umesh-testnet-1
+denom: uumesh
+min_gas_price: "0.0025"
+moniker: my-genesis-validator
+
+# Validator parameters
+stake_amount: 1000000000000
+self_delegation: 1000000000000
+validator_name: validator
+commission_rate: "0.05"
+commission_max: "0.20"
+commission_change: "0.01"
+min_self_delegation: 1000000
+keyring_password: change-me-secure
+
+# Genesis plan config path
+genesis_plan_config: "{{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml"
+
+# Network settings
+validator_p2p_bind_ip: 0.0.0.0
+validator_rpc_bind_ip: 127.0.0.1
+
+# Resource limits
+cpu_limit: "2.0"
+memory_limit: 4g
+memory_reservation: 2g
+
+# Data directory
+data_dir: data-validator
+data_path: "{{ repo_dest }}/{{ data_dir }}"
+
+# Environment file
+env_file_dest: "{{ repo_dest }}/.env.genesis"

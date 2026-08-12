@@ -1,0 +1,14 @@
+---
+# Deploy Genesis Validator node
+# Creates a new blockchain
+
+- name: Deploy Genesis Validator
+  hosts: genesis
+  become: true
+  gather_facts: true
+
+  vars:
+    sentinel_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.genesis

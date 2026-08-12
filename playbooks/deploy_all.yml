@@ -1,22 +1,55 @@
 ---
-# Deploy all three nodes: Validator, Sentry, RPC
-# Reference: MINSTART.md section 7 - Docker Compose
+# Deploy full topology: Genesis → Validator → Sentry → RPC
+# Deploy in order: Genesis first, then others
 
-- name: Deploy full topology (Validator + Sentry + RPC)
-  hosts: all
+- name: Deploy Genesis Validator
+  hosts: genesis
   become: true
   gather_facts: true
-  serial:
-    - 1  # Validator first
-    - 1  # Sentry second
-    - 1  # RPC last
+  serial: 1
 
-  pre_tasks:
-    - name: Debug - show current host
-      ansible.builtin.debug:
-        msg: "Deploying to {{ inventory_hostname }} (node_type={{ node_type }})"
+  vars:
+    sentinel_ip: ""
 
   roles:
-    - role: opscores.umesh_net.common
-    - role: opscores.umesh_net.{{ node_type }}
-      when: node_type in ['validator', 'sentry', 'rpc']
+    - role: opscores.umesh_net.genesis
+
+- name: Deploy Validators (join existing chain)
+  hosts: validator
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    sentinel_ip: ""
+    join_genesis_url: ""
+    persistent_peers_for_join: ""
+
+  roles:
+    - role: opscores.umesh_net.validator
+
+- name: Deploy Sentry nodes
+  hosts: sentry
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    validator_node_id: ""
+    validator_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.sentry
+
+- name: Deploy RPC nodes
+  hosts: rpc
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    sentry_node_id: ""
+    sentry_ip: ""
+
+  roles:
+    - role: opscores.umesh_net.rpc

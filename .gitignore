@@ -13,6 +13,8 @@ venv/
 .env
 .env.local
 *.env.*
+# Allow Jinja2 template files
+!*.j2
 
 # Logs and temporary files
 *.log

@@ -1,15 +1,16 @@
 ---
-# Deploy Validator node on VPS-1
-# Reference: MINSTART.md section 3
+# Deploy Validator node
+# Joins an existing blockchain
 
-- name: Deploy Validator Node
+- name: Deploy Validator
   hosts: validator
   become: true
   gather_facts: true
 
   vars:
-    # Set these vars per deployment
     sentinel_ip: ""
+    join_genesis_url: ""
+    persistent_peers_for_join: ""
 
   roles:
     - role: opscores.umesh_net.validator
