@@ -15,7 +15,7 @@
   tags: [preflight]
 
 # Configure firewall for Genesis Validator
-- name: Set UFW default deny incoming
+- name: Set UFW default incoming
   ansible.builtin.ufw:
     direction: "incoming"
     policy: deny
@@ -54,15 +54,14 @@
   when: firewall_enabled
   tags: [firewall, genesis]
 
-# Create .env file
-- name: Create .env.genesis file from template
-  ansible.builtin.template:
-    src: .env.genesis.j2
-    dest: "{{ env_file_dest }}"
-    mode: '0600'
-  tags: [config, genesis]
+# Check if already initialized
+- name: Check if genesis is already initialized
+  ansible.builtin.stat:
+    path: "{{ data_path }}/config/genesis.json"
+  register: genesis_check
+  tags: [init, genesis]
 
-# Run genesis plan setup
+# Run genesis plan setup (only if not exists)
 - name: Run genesis plan setup
   ansible.builtin.command: >
     {{ repo_dest }}/tools/umeshctl/umeshctl setup plan
@@ -70,8 +69,9 @@
     --env-file {{ env_file_dest }}
   args:
     chdir: "{{ repo_dest }}"
+  when: not genesis_check.stat.exists
   register: genesis_result
-  changed_when: true
+  changed_when: genesis_result.rc == 0
   tags: [genesis, setup]
 
 - name: Show genesis plan output
@@ -79,7 +79,22 @@
     var: genesis_result.stdout_lines
   tags: [genesis, debug]
 
-# Launch validator node
+# Create .env file
+- name: Create .env.genesis file from template
+  ansible.builtin.template:
+    src: .env.genesis.j2
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  notify: "restart validator node"
+  tags: [config, genesis]
+
+# Launch validator node (only if not running)
+- name: Check if validator container is running
+  ansible.builtin.command: docker ps -q -f name=umesh-validator
+  register: container_check
+  changed_when: false
+  tags: [start, genesis]
+
 - name: Launch validator node with docker compose
   ansible.builtin.command: >
     docker compose
@@ -88,8 +103,9 @@
     up -d
   args:
     chdir: "{{ repo_dest }}"
+  when: container_check.stdout | length == 0
   register: validator_start
-  changed_when: true
+  changed_when: validator_start.rc == 0
   tags: [start, genesis]
 
 - name: Show validator startup logs

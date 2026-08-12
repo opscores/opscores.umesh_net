@@ -1,6 +1,6 @@
 ---
 # RPC role defaults
-# Public RPC node
+# Corresponds to .env.rpc from MINSTART.md section 6.3
 
 node_mode: rpc
 chain_id: umesh-testnet-1
@@ -10,15 +10,8 @@ moniker: my-rpc
 
 # Network settings
 genesis_url: ""
-genesis_sha256: ""
-public_rpc_fallback: ""
 persistent_peers: ""
 seeds: ""
-
-# Upstream RPC settings
-rpc_upstream: ""
-rest_upstream: ""
-p2p_upstream: ""
 
 # Bind IPs
 rpc_p2p_bind_ip: 0.0.0.0
@@ -32,13 +25,5 @@ memory_reservation_rpc: 4g
 # OTEL settings
 environment: production
 
-# Data directory
+# Data directory - internal constant
 data_dir: data-rpc
-data_path: "{{ repo_dest }}/{{ data_dir }}"
-
-# Environment file
-env_file_dest: "{{ repo_dest }}/.env.rpc"
-
-# Sentry node info
-sentry_node_id: ""
-sentry_ip: ""

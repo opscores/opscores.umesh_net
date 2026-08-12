@@ -1,6 +1,6 @@
 ---
 # Sentry role defaults
-# Public gateway node
+# Corresponds to .env.sentry from MINSTART.md section 6.2
 
 node_mode: sentry
 chain_id: umesh-testnet-1
@@ -10,23 +10,8 @@ moniker: my-sentry
 
 # Network settings
 genesis_url: ""
-genesis_sha256: ""
-addrbook_url: ""
-addrbook_sha256: ""
-public_rpc_fallback: ""
 persistent_peers: ""
 seeds: ""
-
-# Validator peer info
-sentry_rpc: ""
-validator_rpc: ""
-sentry_external_address: ""
-sentry_public_ip: ""
-external_port: "26656"
-use_private: "false"
-
-# Keyring
-keyring_password: change-me-secure
 
 # Bind IPs
 sentry_p2p_bind_ip: 0.0.0.0
@@ -41,9 +26,5 @@ memory_reservation_sentry: 4g
 # OTEL settings
 environment: production
 
-# Data directory
+# Data directory - internal constant
 data_dir: data-sentry
-data_path: "{{ repo_dest }}/{{ data_dir }}"
-
-# Environment file
-env_file_dest: "{{ repo_dest }}/.env.sentry"

@@ -1,0 +1,8 @@
+---
+# Sentry role internal variables
+# These are not meant to be overridden by users
+
+umesh_data_path: "{{ repo_dest }}/{{ data_dir }}"
+umesh_env_file_dest: "{{ repo_dest }}/.env.sentry"
+umesh_sentry_config_dir: "{{ umesh_data_path }}/config"
+umesh_sentry_binary: "/usr/local/bin/umeshd"

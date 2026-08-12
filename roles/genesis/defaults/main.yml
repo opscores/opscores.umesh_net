@@ -4,13 +4,16 @@
 
 node_mode: validator
 
-# Chain parameters
+# Chain parameters - these can be overridden by user
 chain_id: umesh-testnet-1
 denom: uumesh
 min_gas_price: "0.0025"
 moniker: my-genesis-validator
 
-# Validator parameters
+# Genesis plan config path - internal constant
+genesis_plan_config: "{{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml"
+
+# Validator parameters - these can be overridden by user
 stake_amount: 1000000000000
 self_delegation: 1000000000000
 validator_name: validator
@@ -20,14 +23,11 @@ commission_change: "0.01"
 min_self_delegation: 1000000
 keyring_password: change-me-secure
 
-# Genesis plan config path
-genesis_plan_config: "{{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml"
-
-# Network settings
+# Network settings - these can be overridden by user
 validator_p2p_bind_ip: 0.0.0.0
 validator_rpc_bind_ip: 127.0.0.1
 
-# Resource limits
+# Resource limits - these can be overridden by user
 cpu_limit: "2.0"
 memory_limit: 4g
 memory_reservation: 2g
@@ -35,9 +35,5 @@ memory_reservation: 2g
 # OTEL settings
 environment: production
 
-# Data directory
+# Data directory - internal constant, do not override
 data_dir: data-validator
-data_path: "{{ repo_dest }}/{{ data_dir }}"
-
-# Environment file
-env_file_dest: "{{ repo_dest }}/.env.genesis"

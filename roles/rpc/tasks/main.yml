@@ -39,15 +39,14 @@
   when: firewall_enabled
   tags: [firewall, rpc]
 
-# Create .env file
-- name: Create .env.rpc file from template
-  ansible.builtin.template:
-    src: .env.rpc.j2
-    dest: "{{ env_file_dest }}"
-    mode: '0600'
-  tags: [config, rpc]
+# Check if already initialized
+- name: Check if RPC is already initialized
+  ansible.builtin.stat:
+    path: "{{ data_path }}/config/genesis.json"
+  register: genesis_check
+  tags: [init, rpc]
 
-# Initialize RPC (section 5.1)
+# Initialize RPC node (only if not exists)
 - name: Initialize RPC node
   ansible.builtin.command: >
     {{ repo_dest }}/tools/umeshctl/umeshctl setup init
@@ -55,12 +54,19 @@
     --env-file {{ env_file_dest }}
   args:
     chdir: "{{ repo_dest }}"
+  when: not genesis_check.stat.exists
   register: rpc_init
-  changed_when: true
+  changed_when: rpc_init.rc == 0
   tags: [init, rpc]
 
-# Launch RPC (section 5.2)
-- name: Launch RPC node
+# Launch RPC (only if not running)
+- name: Check if RPC container is running
+  ansible.builtin.command: docker ps -q -f name=umesh-rpc
+  register: container_check
+  changed_when: false
+  tags: [start, rpc]
+
+- name: Launch RPC node with docker compose
   ansible.builtin.command: >
     docker compose
     --env-file {{ env_file_dest }}
@@ -68,8 +74,9 @@
     up -d
   args:
     chdir: "{{ repo_dest }}"
+  when: container_check.stdout | length == 0
   register: rpc_start
-  changed_when: true
+  changed_when: rpc_start.rc == 0
   tags: [start, rpc]
 
 - name: Check RPC health
@@ -81,3 +88,12 @@
 - name: Display RPC health
   ansible.builtin.debug:
     var: rpc_health.stdout
+
+# Create .env file
+- name: Create .env.rpc file from template
+  ansible.builtin.template:
+    src: .env.rpc.j2
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  notify: "restart rpc node"
+  tags: [config, rpc]

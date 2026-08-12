@@ -40,15 +40,14 @@
   when: firewall_enabled
   tags: [firewall, sentry]
 
-# Create .env file
-- name: Create .env.sentry file
-  ansible.builtin.template:
-    src: .env.sentry.j2
-    dest: "{{ env_file_dest }}"
-    mode: '0600'
-  tags: [config, sentry]
+# Check if already initialized
+- name: Check if sentry is already initialized
+  ansible.builtin.stat:
+    path: "{{ data_path }}/config/genesis.json"
+  register: genesis_check
+  tags: [init, sentry]
 
-# Initialize Sentry (section 4.1)
+# Initialize Sentry (only if not exists)
 - name: Initialize sentry node
   ansible.builtin.command: >
     {{ repo_dest }}/tools/umeshctl/umeshctl setup init
@@ -56,12 +55,19 @@
     --env-file {{ env_file_dest }}
   args:
     chdir: "{{ repo_dest }}"
+  when: not genesis_check.stat.exists
   register: sentry_init
-  changed_when: true
+  changed_when: sentry_init.rc == 0
   tags: [init, sentry]
 
-# Launch sentry
-- name: Launch sentry node
+# Launch sentry (only if not running)
+- name: Check if sentry container is running
+  ansible.builtin.command: docker ps -q -f name=umesh-sentry
+  register: container_check
+  changed_when: false
+  tags: [start, sentry]
+
+- name: Launch sentry node with docker compose
   ansible.builtin.command: >
     docker compose
     --env-file {{ env_file_dest }}
@@ -69,8 +75,9 @@
     up -d
   args:
     chdir: "{{ repo_dest }}"
+  when: container_check.stdout | length == 0
   register: sentry_start
-  changed_when: true
+  changed_when: sentry_start.rc == 0
   tags: [start, sentry]
 
 - name: Check sentry peer count
@@ -83,3 +90,12 @@
 - name: Display peer count
   ansible.builtin.debug:
     var: peer_count.stdout
+
+# Create .env file
+- name: Create .env.sentry file
+  ansible.builtin.template:
+    src: .env.sentry.j2
+    dest: "{{ env_file_dest }}"
+    mode: '0600'
+  notify: "restart sentry node"
+  tags: [config, sentry]
