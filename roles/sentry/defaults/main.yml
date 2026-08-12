@@ -1,25 +1,54 @@
 ---
 # Sentry role defaults
-# Corresponds to .env.sentry from MINSTART.md section 6.2
+# Corresponds to .env.sentry.example from the node-umesh project
 
 node_mode: sentry
 chain_id: umesh-testnet-1
 denom: uumesh
-min_gas_price: "0.0025uumesh"
+min_gas_price: "0.0025"          # number only — CLI appends DENOM itself
+moniker: my-sentry
 
 # Cosmos SDK / WasmVM settings
-wasm_memory_cache_size: 1024      # MiB
-wasm_simulation_gas_limit: 50000000 # Gas limit for simulation
+wasm_memory_cache_size: 1024       # MiB
+wasm_simulation_gas_limit: 50000000
 
 # Pruning settings
 pruning_strategy: "custom"
 pruning_keep_recent: 1000
 pruning_interval: 100
 
-# Network settings
+# Validator connection info (set in inventory / playbook).
+# Per MINSTART.md 6.2: PERSISTENT_PEERS="<VALIDATOR_NODE_ID>@<VALIDATOR_IP>:26656"
+validator_node_id: ""
+validator_ip: ""
+
+# [init] Network sources
 genesis_url: ""
-persistent_peers: ""
+genesis_sha256: ""
+addrbook_url: ""
+addrbook_sha256: ""
+public_rpc_fallback: ""
 seeds: ""
+
+# PERSISTENT_PEERS is built from validator_node_id/validator_ip when given,
+# otherwise used as-is (full "nodeID@ip:26656" string override).
+persistent_peers: >-
+  {{ (validator_node_id + '@' + validator_ip + ':26656')
+     if (validator_node_id | length > 0 and validator_ip | length > 0)
+     else '' }}
+
+# [init] Validator link (required by umeshctl for role=sentry)
+sentry_rpc: "http://127.0.0.1:26657"
+validator_rpc: "{{ 'http://' + validator_ip + ':26657' if validator_ip | length > 0 else '' }}"
+
+# [init] External address settings
+sentry_external_address: ""
+sentry_public_ip: ""
+external_port: "26656"
+use_private: "false"
+
+# Keyring (sentry monitoring key)
+keyring_password: change-me-secure
 
 # Bind IPs
 sentry_p2p_bind_ip: 0.0.0.0

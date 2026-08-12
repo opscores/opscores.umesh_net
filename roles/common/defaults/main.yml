@@ -7,9 +7,13 @@ supported_os:
   - { name: 'Ubuntu', versions: ['24', '26'] }
   - { name: 'Debian', versions: ['12', '13'] }
 
-# Docker
+# Docker image.
+# Tag matches NODE_IMAGE=umesh-node:latest in docker-compose.yml / .env files.
+# docker_build_version is passed as the VERSION build-arg (see justfile build-image).
 docker_image_tag: umesh-node
-docker_image_version: dev
+docker_image_version: latest
+docker_build_version: dev
+docker_src_provider: src-provider-umeshprep
 
 # Firewall
 firewall_enabled: true

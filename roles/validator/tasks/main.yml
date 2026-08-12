@@ -58,7 +58,7 @@
 - name: Create .env.validator file from template
   ansible.builtin.template:
     src: .env.validator.j2
-    dest: "{{ env_file_dest }}"
+    dest: "{{ umesh_env_file_dest }}"
     mode: '0600'
   notify: "restart validator node"
   tags: [config, validator]
@@ -68,7 +68,7 @@
   block:
     - name: Check if validator is already initialized
       ansible.builtin.stat:
-        path: "{{ data_path }}/config/genesis.json"
+        path: "{{ umesh_data_path }}/config/genesis.json"
       register: genesis_check
       tags: [init, validator]
 
@@ -76,7 +76,7 @@
       ansible.builtin.command: >
         {{ repo_dest }}/tools/umeshctl/umeshctl setup init
         --role join
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists
@@ -93,7 +93,7 @@
     - name: Launch validator node with docker compose
       ansible.builtin.command: >
         docker compose
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
         --profile validator
         up -d
       args:
@@ -112,13 +112,13 @@
   rescue:
     - name: Cleanup failed initialization
       file:
-        path: "{{ data_path }}"
+        path: "{{ umesh_data_path }}"
         state: absent
       tags: [cleanup, validator]
 
     - name: Fail with error message
       ansible.builtin.fail:
-        msg: "Validator initialization failed. Data directory {{ data_path }} has been cleaned up."
+        msg: "Validator initialization failed. Data directory {{ umesh_data_path }} has been cleaned up."
       tags: [error, validator]
 
 - name: Display startup logs

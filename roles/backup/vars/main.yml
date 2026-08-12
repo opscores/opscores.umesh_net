@@ -2,19 +2,25 @@
 # Backup role variables
 # These are not meant to be overridden by users
 
-# Dynamically determined paths
-# data_path and env_file_dest are set by the including role
+# Timestamped destination directory for this backup run
 backup_dir: "{{ backup_dir_base }}/{{ ansible_date_time.iso8601_basic_short }}"
 
-# Key files to backup per role type
-validator_keys:
-    - "priv_validator_key.json"
-    - "node_key.json"
+# Data directory of the node depends on its role (see docker-compose.yml)
+backup_data_dirs:
+  genesis: data-validator
+  validator: data-validator
+  sentry: data-sentry
+  rpc: data-rpc
 
-sentry_keys:
-    - "priv_validator_key.json"
-    - "node_key.json"
+backup_data_path: "{{ repo_dest }}/{{ backup_data_dirs[umesh_role] }}"
 
-rpc_configs:
-    - "config.toml"
-    - "app.toml"
+# Key files backed up for consensus-critical roles
+backup_key_files:
+  - config/priv_validator_key.json
+  - config/node_key.json
+
+# Node config files backed up for every role
+backup_config_files:
+  - config/config.toml
+  - config/app.toml
+  - config/genesis.json

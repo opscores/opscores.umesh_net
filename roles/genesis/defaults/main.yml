@@ -7,7 +7,8 @@ node_mode: validator
 # Chain parameters - these can be overridden by user
 chain_id: umesh-testnet-1
 denom: uumesh
-min_gas_price: "0.0025uumesh"
+min_gas_price: "0.0025"
+moniker: my-genesis-validator
 
 # Cosmos SDK / WasmVM settings
 wasm_memory_cache_size: 1024      # MiB

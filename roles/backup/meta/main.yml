@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: backup
+  namespace: opscores
+  author: opscores
+  description: Backup Umesh node keys and configuration
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "24.04"
+        - "26.04"
+    - name: Debian
+      versions:
+        - "12"
+        - "13"
+  galaxy_tags:
+    - backup
+    - blockchain
+    - cosmos
+    - umesh
+dependencies: []

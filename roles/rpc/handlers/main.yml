@@ -4,7 +4,7 @@
 - name: restart rpc node
   ansible.builtin.command: >
     docker compose
-    --env-file {{ env_file_dest }}
+    --env-file {{ umesh_env_file_dest }}
     --profile rpc
     restart
   args:
@@ -14,7 +14,7 @@
 - name: stop rpc node
   ansible.builtin.command: >
     docker compose
-    --env-file {{ env_file_dest }}
+    --env-file {{ umesh_env_file_dest }}
     --profile rpc
     down
   args:

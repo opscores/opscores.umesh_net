@@ -1,22 +1,23 @@
 ---
-# Validator role handlers
+# Genesis role handlers
+# Genesis runs the validator container (profile: validator)
 
 - name: restart validator node
   ansible.builtin.command: >
     docker compose
     --env-file {{ umesh_env_file_dest }}
-    --profile {{ node_mode }}
+    --profile validator
     restart
   args:
     chdir: "{{ repo_dest }}"
-  listen: validator_restarted
+  listen: genesis_restarted
 
 - name: stop validator node
   ansible.builtin.command: >
     docker compose
     --env-file {{ umesh_env_file_dest }}
-    --profile {{ node_mode }}
+    --profile validator
     down
   args:
     chdir: "{{ repo_dest }}"
-  listen: validator_stopped
+  listen: genesis_stopped

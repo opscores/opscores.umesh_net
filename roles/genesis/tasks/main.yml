@@ -55,10 +55,12 @@
   tags: [firewall, genesis]
 
 # Create .env file (BEFORE setup plan!)
-- name: Create .env.genesis file from template
+# NOTE: docker-compose.yml hardcodes env_file: .env.validator for the
+# validator service, so genesis writes to .env.validator (MINSTART.md 3.3).
+- name: Create .env.validator file from genesis template
   ansible.builtin.template:
     src: .env.genesis.j2
-    dest: "{{ env_file_dest }}"
+    dest: "{{ umesh_env_file_dest }}"
     mode: '0600'
   notify: "restart validator node"
   tags: [config, genesis]
@@ -68,7 +70,7 @@
   block:
     - name: Check if genesis is already initialized
       ansible.builtin.stat:
-        path: "{{ data_path }}/config/genesis.json"
+        path: "{{ umesh_data_path }}/config/genesis.json"
       register: genesis_check
       tags: [init, genesis]
 
@@ -76,7 +78,7 @@
       ansible.builtin.command: >
         {{ repo_dest }}/tools/umeshctl/umeshctl setup plan
         --config {{ genesis_plan_config }}
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists
@@ -93,7 +95,7 @@
     - name: Launch validator node with docker compose
       ansible.builtin.command: >
         docker compose
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
         --profile validator
         up -d
       args:
@@ -111,13 +113,13 @@
   rescue:
     - name: Cleanup failed initialization
       file:
-        path: "{{ data_path }}"
+        path: "{{ umesh_data_path }}"
         state: absent
       tags: [cleanup, genesis]
 
     - name: Fail with error message
       ansible.builtin.fail:
-        msg: "Genesis initialization failed. Data directory {{ data_path }} has been cleaned up."
+        msg: "Genesis initialization failed. Data directory {{ umesh_data_path }} has been cleaned up."
       tags: [error, genesis]
   tags: [init, genesis]
 

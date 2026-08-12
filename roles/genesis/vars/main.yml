@@ -3,7 +3,10 @@
 # These are not meant to be overridden by users
 
 umesh_data_path: "{{ repo_dest }}/{{ data_dir }}"
-umesh_env_file_dest: "{{ repo_dest }}/.env.genesis"
+# NOTE: docker-compose.yml hardcodes `env_file: .env.validator` for the
+# validator service, so genesis must also write to .env.validator
+# (see MINSTART.md section 3.3).
+umesh_env_file_dest: "{{ repo_dest }}/.env.validator"
 umesh_genesis_plan_config: "{{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml"
 umesh_validator_config_dir: "{{ umesh_data_path }}/config"
 umesh_validator_binary: "/usr/local/bin/umeshd"

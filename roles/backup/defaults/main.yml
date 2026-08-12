@@ -1,15 +1,12 @@
 ---
 # Backup role defaults
-# Configuration for key backups
+# Configuration for node key/config backups
 
-# Backup directory base path
-backup_dir_base: "/opt/umesh-backups"
+# Role of the node being backed up: genesis | validator | sentry | rpc
+umesh_role: validator
 
-# Backup retention (number of backups to keep)
+# Base path for backups on the target host
+backup_dir_base: /opt/umesh-backups
+
+# Number of backup archives to keep (older ones are removed)
 backup_retention: 7
-
-# Roles that should backup keys
-backup_roles:
-  - "validator"
-  - "sentry"
-  - "genesis"

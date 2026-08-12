@@ -7,58 +7,63 @@
   become: false
   gather_facts: false
 
-  vars:
-    validator_mode: "{{ hostvars[inventory_hostname].validator_mode | default('genesis') }}"
-
   tasks:
-    - name: Check node sync status
-      ansible.builtin.shell: >
-        curl -s http://localhost:26657/status | jq '.result.sync_info'
-      register: sync_status
-      changed_when: false
+    - name: Fetch node status
+      ansible.builtin.uri:
+        url: "http://localhost:26657/status"
+        method: GET
+        return_content: true
+        timeout: 10
+      register: status_result
+      failed_when: status_result.status != 200
       tags: [verify, sync]
 
-    - name: Check peer count
-      ansible.builtin.shell: >
-        curl -s http://localhost:26657/net_info | jq '.result.n_peers'
-      register: n_peers
-      changed_when: false
+    - name: Fetch peer count
+      ansible.builtin.uri:
+        url: "http://localhost:26657/net_info"
+        method: GET
+        return_content: true
+        timeout: 10
+      register: net_info_result
+      failed_when: net_info_result.status != 200
       tags: [verify, p2p]
 
-    - name: Check validator voting power (validator only)
-      ansible.builtin.shell: >
-        curl -s http://localhost:26657/status | jq '.result.validator_info'
-      register: validator_info
-      changed_when: false
-      when: "'validator' in group_names"
-      tags: [verify, validator]
+    - name: Parse node facts
+      ansible.builtin.set_fact:
+        block_height: "{{ (status_result.json.result.sync_info.latest_block_height | default('0')) | int }}"
+        catching_up: "{{ status_result.json.result.sync_info.catching_up | default(true) | bool }}"
+        n_peers: "{{ (net_info_result.json.result.n_peers | default('0')) | int }}"
+        voting_power: "{{ (status_result.json.result.validator_info.voting_power | default('0')) | int }}"
+      tags: [verify]
 
     - name: Show verification results
       ansible.builtin.debug:
         msg: |
           Host: {{ inventory_hostname }}
-          Validator Mode: {{ validator_mode }}
-          Sync Info: {{ sync_status.stdout }}
-          Catching Up: {{ sync_status.stdout | from_json .result.sync_info.catching_up | bool }}
-          Peers: {{ n_peers.stdout }}
-          Voting Power: {{ validator_info.stdout | from_json .result.validator_info.voting_power | default('N/A') }}
+          Block Height: {{ block_height }}
+          Catching Up: {{ catching_up }}
+          Peers: {{ n_peers }}
+          Voting Power: {{ voting_power }}
       tags: [verify, results]
 
-    - name: Assert node is healthy
+    # Every node must have peers and a growing chain
+    - name: Assert node is connected and syncing
       ansible.builtin.assert:
         that:
-          - sync_status.stdout | from_json .result.sync_info.catching_up == false
-          - n_peers.stdout | int > 0
-          - validator_info.stdout | from_json .result.validator_info.voting_power | default(0) | int > 0
-        fail_msg: |
-          Node health check failed:
-          - Catching up: {{ sync_status.stdout | from_json .result.sync_info.catching_up }}
-          - Peer count: {{ n_peers.stdout }}
-          - Voting power: {{ validator_info.stdout | from_json .result.validator_info.voting_power | default('N/A') }}
-        tags: [verify, assert]
+          - block_height | int > 0
+          - catching_up | bool == false
+          - n_peers | int > 0
+        fail_msg: >-
+          Node is not healthy: height={{ block_height }},
+          catching_up={{ catching_up }}, peers={{ n_peers }}
+      tags: [verify, assert]
 
-    - name: Show validator mode
-      ansible.builtin.debug:
-        msg: "Validator mode: {{ validator_mode }}"
-      when: "'validator' in group_names"
-      tags: [verify, debug]
+    # Voting power check only makes sense for validators / genesis
+    - name: Assert validator has voting power
+      ansible.builtin.assert:
+        that:
+          - voting_power | int > 0
+        fail_msg: >-
+          Validator has no voting power: {{ voting_power }}
+      when: "'validator' in group_names or 'genesis' in group_names"
+      tags: [verify, assert, validator]

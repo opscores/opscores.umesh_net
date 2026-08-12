@@ -29,6 +29,16 @@
     version: "{{ repo_branch }}"
     force: true
     update: true
+  register: git_clone_result
+  tags: [repo, install]
+
+# docker-compose.yml mounts ./backups into every container;
+# create it upfront so it is not created root-owned by Docker.
+- name: Ensure backups directory exists
+  ansible.builtin.file:
+    path: "{{ repo_dest }}/backups"
+    state: directory
+    mode: '0755'
   tags: [repo, install]
 
 - name: Get current commit hash for build
@@ -37,42 +47,44 @@
   changed_when: false
   tags: [repo, build]
 
-# Check if Dockerfile or build args changed (section 2.4)
-- name: Check if Dockerfile changed
-  ansible.builtin.stat:
-    path: "{{ repo_dest }}/Dockerfile"
-  register: dockerfile_stat
-
-- name: Get Docker image digest (if exists)
+# Build Docker image (section 2.4, mirrors `just build-image`).
+# Only rebuild when the repo was updated or the image is missing.
+- name: Check if Docker image already exists
   ansible.builtin.command: >
-    docker images -q {{ docker_image_tag }}:{{ docker_image_version }} 2>/dev/null
+    docker images -q {{ docker_image_tag }}:{{ docker_image_version }}
   register: docker_image_exists
   changed_when: false
+  failed_when: false
+  tags: [build, docker]
 
-- name: Build Docker image (only if changed)
+- name: Build Docker image
   ansible.builtin.command: >
-    docker build
-    --build-arg VERSION={{ docker_image_version }}
+    docker build --pull
+    --build-arg VERSION={{ docker_build_version }}
     --build-arg COMMIT={{ git_commit_hash.stdout }}
+    --build-arg SRC_PROVIDER={{ docker_src_provider }}
     -t {{ docker_image_tag }}:{{ docker_image_version }}
     -f Dockerfile .
-    args:
-      chdir: "{{ repo_dest }}"
-  tags: [build, docker]
-  when: dockerfile_stat.stat.mtime > (now - 86400).timestamp or not docker_image_exists.stdout | length > 0
+  args:
+    chdir: "{{ repo_dest }}"
+  when: git_clone_result.changed or (docker_image_exists.stdout | length == 0)
   register: docker_build_result
+  changed_when: docker_build_result.rc == 0
+  tags: [build, docker]
 
-- name: Record Docker build timestamp
-  ansible.builtin.lineinfile:
-    path: "{{ repo_dest }}/.docker-build-timestamp"
-    line: "{{ now }}"
-    create: yes
-  when: docker_build_result is changed
+# Build umeshctl (section 2.5, mirrors `just build-cli`).
+# The script auto-detects local Go or falls back to Docker.
+- name: Check if umeshctl binary exists
+  ansible.builtin.stat:
+    path: "{{ repo_dest }}/tools/umeshctl/umeshctl"
+  register: umeshctl_binary
+  tags: [build, cli]
 
-- name: Build umeshctl CLI tool (section 2.5)
+- name: Build umeshctl CLI tool
   ansible.builtin.command: just build-cli
   args:
     chdir: "{{ repo_dest }}"
+  when: git_clone_result.changed or not umeshctl_binary.stat.exists
   register: build_cli_result
-  changed_when: build_cli_result is changed
+  changed_when: build_cli_result.rc == 0
   tags: [build, cli]

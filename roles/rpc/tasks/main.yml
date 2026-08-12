@@ -43,7 +43,7 @@
 - name: Create .env.rpc file from template
   ansible.builtin.template:
     src: .env.rpc.j2
-    dest: "{{ env_file_dest }}"
+    dest: "{{ umesh_env_file_dest }}"
     mode: '0600'
   notify: "restart rpc node"
   tags: [config, rpc]
@@ -53,7 +53,7 @@
   block:
     - name: Check if RPC is already initialized
       ansible.builtin.stat:
-        path: "{{ data_path }}/config/genesis.json"
+        path: "{{ umesh_data_path }}/config/genesis.json"
       register: genesis_check
       tags: [init, rpc]
 
@@ -61,7 +61,7 @@
       ansible.builtin.command: >
         {{ repo_dest }}/tools/umeshctl/umeshctl setup init
         --role rpc
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists
@@ -78,7 +78,7 @@
     - name: Launch RPC node with docker compose
       ansible.builtin.command: >
         docker compose
-        --env-file {{ env_file_dest }}
+        --env-file {{ umesh_env_file_dest }}
         --profile rpc
         up -d
       args:
@@ -96,13 +96,13 @@
   rescue:
     - name: Cleanup failed initialization
       file:
-        path: "{{ data_path }}"
+        path: "{{ umesh_data_path }}"
         state: absent
       tags: [cleanup, rpc]
 
     - name: Fail with error message
       ansible.builtin.fail:
-        msg: "RPC initialization failed. Data directory {{ data_path }} has been cleaned up."
+        msg: "RPC initialization failed. Data directory {{ umesh_data_path }} has been cleaned up."
       tags: [error, rpc]
   tags: [init, rpc]
 

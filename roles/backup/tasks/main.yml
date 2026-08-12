@@ -1,56 +1,80 @@
 ---
-# Backup role for Umesh node keys
-# Creates backups of validator and sentry key files
+# Backup role tasks
+# Creates a timestamped backup of node keys and configuration
 
-# Create backup directory
-- name: Create backup directory
+- name: Validate umesh_role
+  ansible.builtin.assert:
+    that:
+      - umesh_role in ['genesis', 'validator', 'sentry', 'rpc']
+    fail_msg: "umesh_role must be one of: genesis, validator, sentry, rpc"
+  tags: [backup, validate]
+
+- name: Check node is initialized before backup
+  ansible.builtin.stat:
+    path: "{{ backup_data_path }}/config/genesis.json"
+  register: backup_genesis_check
+  tags: [backup, validate]
+
+- name: Fail if node is not initialized
+  ansible.builtin.fail:
+    msg: "Node data not found at {{ backup_data_path }} — nothing to back up."
+  when: not backup_genesis_check.stat.exists
+  tags: [backup, validate]
+
+# Key backup task is intentionally NOT wrapped in block/rescue:
+# a failed backup must fail loudly, not silently skip.
+
+- name: Create timestamped backup directory
   ansible.builtin.file:
     path: "{{ backup_dir }}"
     state: directory
     mode: '0700'
   tags: [backup, setup]
 
-# Backup validator keys (priv_validator_key.json and node_key.json)
-- name: Backup validator keys
+# Consensus keys only exist on roles that hold the validator key
+- name: Backup consensus keys (genesis/validator only)
   ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-{{ item | basename }}"
-    remote_src: yes
-  loop:
-    - "{{ data_path }}/config/priv_validator_key.json"
-    - "{{ data_path }}/config/node_key.json"
-  when: umesh_role == 'validator' or umesh_role == 'genesis'
+    src: "{{ backup_data_path }}/{{ item }}"
+    dest: "{{ backup_dir }}/{{ item | basename }}"
+    remote_src: true
+    mode: '0600'
+  loop: "{{ backup_key_files }}"
+  when: umesh_role in ['genesis', 'validator']
   tags: [backup, keys]
 
-# Backup sentry keys
-- name: Backup sentry keys
+- name: Backup node configuration
   ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-{{ item | basename }}"
-    remote_src: yes
-  loop:
-    - "{{ data_path }}/config/priv_validator_key.json"
-    - "{{ data_path }}/config/node_key.json"
-  when: umesh_role == 'sentry'
-  tags: [backup, keys]
-
-# Backup RPC configuration
-- name: Backup RPC configuration
-  ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "{{ backup_dir }}/{{ inventory_hostname }}-{{ ansible_date_time.iso8601_basic_short }}-rpc-config-{{ item | basename }}"
-    remote_src: yes
-  loop:
-    - "{{ data_path }}/config/config.toml"
-    - "{{ data_path }}/config/app.toml"
-  when: umesh_role == 'rpc'
+    src: "{{ backup_data_path }}/{{ item }}"
+    dest: "{{ backup_dir }}/{{ item | basename }}"
+    remote_src: true
+    mode: '0644'
+  loop: "{{ backup_config_files }}"
   tags: [backup, config]
 
-# Compress backup directory
-- name: Compress backup directory
-  ansible.builtin.command: >
-    tar -czf "{{ backup_dir }}.tar.gz"
-    -C {{ backup_dir | dirname }} {{ backup_dir | basename }}
-  args:
-    creates: "{{ backup_dir }}.tar.gz"
+- name: Compress backup into archive
+  ansible.builtin.archive:
+    path: "{{ backup_dir }}"
+    dest: "{{ backup_dir }}.tar.gz"
+    format: gz
   tags: [backup, compress]
+
+- name: Remove uncompressed backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: absent
+  tags: [backup, compress]
+
+- name: Prune old backups beyond retention limit
+  ansible.builtin.shell: >
+    ls -1t {{ backup_dir_base }}/*.tar.gz 2>/dev/null
+    | tail -n +{{ backup_retention | int + 1 }}
+    | xargs -r rm -f
+  args:
+    executable: /bin/bash
+  changed_when: false
+  tags: [backup, prune]
+
+- name: Show backup location
+  ansible.builtin.debug:
+    msg: "Backup created: {{ backup_dir }}.tar.gz"
+  tags: [backup]

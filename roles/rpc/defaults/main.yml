@@ -1,25 +1,48 @@
 ---
 # RPC role defaults
-# Corresponds to .env.rpc from MINSTART.md section 6.3
+# Corresponds to .env.rpc.example from the node-umesh project
 
 node_mode: rpc
 chain_id: umesh-testnet-1
 denom: uumesh
-min_gas_price: "0.0025uumesh"
+min_gas_price: "0.0025"          # number only — CLI appends DENOM itself
+moniker: my-rpc
 
 # Cosmos SDK / WasmVM settings
-wasm_memory_cache_size: 1024      # MiB
-wasm_simulation_gas_limit: 50000000 # Gas limit for simulation
+wasm_memory_cache_size: 1024       # MiB
+wasm_simulation_gas_limit: 50000000
 
 # Pruning settings
 pruning_strategy: "custom"
 pruning_keep_recent: 1000
 pruning_interval: 100
 
-# Network settings
+# Sentry connection info (set in inventory / playbook).
+# Per MINSTART.md 6.3:
+#   PERSISTENT_PEERS / P2P_UPSTREAM = "<SENTRY_NODE_ID>@<SENTRY_IP>:26656"
+#   RPC_UPSTREAM  = "http://<SENTRY_IP>:26657"
+#   REST_UPSTREAM = "http://<SENTRY_IP>:1317"
+sentry_node_id: ""
+sentry_ip: ""
+
+# [init] Network sources
 genesis_url: ""
-persistent_peers: ""
+genesis_sha256: ""
+public_rpc_fallback: ""
 seeds: ""
+
+# Peers and upstreams are built from sentry_node_id/sentry_ip when given,
+# otherwise used as-is (full string overrides).
+persistent_peers: >-
+  {{ (sentry_node_id + '@' + sentry_ip + ':26656')
+     if (sentry_node_id | length > 0 and sentry_ip | length > 0)
+     else '' }}
+rpc_upstream: "{{ 'http://' + sentry_ip + ':26657' if sentry_ip | length > 0 else '' }}"
+rest_upstream: "{{ 'http://' + sentry_ip + ':1317' if sentry_ip | length > 0 else '' }}"
+p2p_upstream: >-
+  {{ (sentry_node_id + '@' + sentry_ip + ':26656')
+     if (sentry_node_id | length > 0 and sentry_ip | length > 0)
+     else '' }}
 
 # Bind IPs
 rpc_p2p_bind_ip: 0.0.0.0
