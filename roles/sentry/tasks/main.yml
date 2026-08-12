@@ -94,8 +94,21 @@
         curl -s http://localhost:26657/net_info | jq '.result.n_peers'
       register: peer_count
       changed_when: false
+      failed_when: false
       tags: [check, sentry]
   rescue:
+    - name: Show sentry setup stderr
+      ansible.builtin.debug:
+        var: sentry_init.stderr_lines
+      when: sentry_init is defined and sentry_init.stderr | length > 0
+      tags: [error, sentry]
+
+    - name: Show docker compose stderr
+      ansible.builtin.debug:
+        var: sentry_start.stderr_lines
+      when: sentry_start is defined and sentry_start.stderr | length > 0
+      tags: [error, sentry]
+
     - name: Cleanup failed initialization
       file:
         path: "{{ umesh_data_path }}"

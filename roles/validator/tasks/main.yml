@@ -107,9 +107,22 @@
       ansible.builtin.shell: docker logs -n 50 umesh-validator
       register: validator_logs
       changed_when: false
+      failed_when: false
       tags: [debug, validator]
 
   rescue:
+    - name: Show initialization stderr
+      ansible.builtin.debug:
+        var: validator_init.stderr_lines
+      when: validator_init is defined and validator_init.stderr | length > 0
+      tags: [error, validator]
+
+    - name: Show docker compose stderr
+      ansible.builtin.debug:
+        var: validator_start.stderr_lines
+      when: validator_start is defined and validator_start.stderr | length > 0
+      tags: [error, validator]
+
     - name: Cleanup failed initialization
       file:
         path: "{{ umesh_data_path }}"

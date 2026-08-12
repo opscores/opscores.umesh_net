@@ -92,8 +92,21 @@
       ansible.builtin.shell: curl -s http://localhost:26657/health
       register: rpc_health
       changed_when: false
+      failed_when: false
       tags: [check, rpc]
   rescue:
+    - name: Show RPC setup stderr
+      ansible.builtin.debug:
+        var: rpc_init.stderr_lines
+      when: rpc_init is defined and rpc_init.stderr | length > 0
+      tags: [error, rpc]
+
+    - name: Show docker compose stderr
+      ansible.builtin.debug:
+        var: rpc_start.stderr_lines
+      when: rpc_start is defined and rpc_start.stderr | length > 0
+      tags: [error, rpc]
+
     - name: Cleanup failed initialization
       file:
         path: "{{ umesh_data_path }}"
