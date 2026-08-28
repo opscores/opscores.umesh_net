@@ -1,0 +1,35 @@
+# ============================================================
+# Node configuration for an RPC node (public access)
+# Used by: umeshctl init rpc --config {{ umesh_config_path }} --keyring-password-file {{ keyring_pass_file }}
+# ============================================================
+# Secrets (keyring password) are passed separately via --keyring-password-file.
+
+apiVersion: umesh.network/v1
+kind: Node
+role: rpc
+
+node:
+  dataDir: ./{{ data_dir }}
+  moniker: {{ moniker }}
+  environment: {{ environment | default('production') }}
+  pruning: {{ pruning_strategy | default('custom') }}
+
+chain:
+  chainId: {{ chain_id }}
+  denom: {{ denom }}
+  minGasPrice: "{{ min_gas_price }}"
+
+join:
+  genesisUrl: "{{ genesis_url | default('') }}"
+  genesisSha256: "{{ genesis_sha256 | default('') }}"
+  sentryRpc: "{{ rpc_upstream | default('') }}"
+  validatorRpc: "{{ validator_rpc | default('') }}"
+
+network:
+  seeds: "{{ seeds | default('') }}"
+  persistentPeers: "{{ persistent_peers | default('') }}"
+  externalAddress: "{{ rpc_external_address | default('') }}"
+
+telemetry:
+  endpoint: "http://otel-collector.monitoring.svc:4317"
+  serviceName: "umesh-rpc"

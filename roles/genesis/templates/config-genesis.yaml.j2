@@ -1,0 +1,40 @@
+# ============================================================
+# Node configuration for genesis validator (creates a new chain)
+# Used by: umeshctl init genesis --config {{ umesh_config_path }}
+# ============================================================
+# Secrets (keyring password) are passed separately via
+# --keyring-password-file, never stored in this file.
+#
+# NOTE: This template is for `umeshctl init genesis` (manual single-validator
+# genesis). The standard Ansible flow uses `umeshctl genesis plan` instead,
+# which reads a genesis-plan.yaml (different format with allocations).
+# This template is kept for manual/advanced use.
+
+apiVersion: umesh.network/v1
+kind: Node
+role: genesis
+
+node:
+  dataDir: ./{{ data_dir }}
+  moniker: {{ moniker }}
+  environment: {{ environment | default('production') }}
+
+chain:
+  chainId: {{ chain_id }}
+  denom: {{ denom }}
+  minGasPrice: "{{ min_gas_price }}"
+
+validator:
+  keyName: {{ validator_name | default('validator') }}
+  stakeAmount: "{{ stake_amount | default('1000000000000') }}{{ denom }}"
+  selfDelegation: "{{ self_delegation | default('1000000000000') }}{{ denom }}"
+  externalAddress: ""
+  commission:
+    rate: "{{ commission_rate | default('0.05') }}"
+    maxRate: "{{ commission_max | default('0.20') }}"
+    maxChangeRate: "{{ commission_change | default('0.01') }}"
+  minSelfDelegation: "{{ min_self_delegation | default('1000000') }}"
+
+telemetry:
+  endpoint: "http://otel-collector.monitoring.svc:4317"
+  serviceName: "umesh-validator"

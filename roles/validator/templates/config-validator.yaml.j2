@@ -1,0 +1,34 @@
+# ============================================================
+# Node configuration for a post-genesis validator (joins existing network)
+# Used by: umeshctl validator --config {{ umesh_config_path }} --keyring-password-file {{ keyring_pass_file }}
+# ============================================================
+# Secrets (keyring password) are passed separately via --keyring-password-file.
+
+apiVersion: umesh.network/v1
+kind: Node
+role: validator
+
+node:
+  dataDir: ./{{ data_dir }}
+  moniker: {{ moniker }}
+  environment: {{ environment | default('production') }}
+
+chain:
+  chainId: {{ chain_id }}
+  denom: {{ denom }}
+  minGasPrice: "{{ min_gas_price }}"
+
+join:
+  genesisUrl: "{{ join_genesis_url | default('') }}"
+  genesisSha256: "{{ join_genesis_sha256 | default('') }}"
+  sentryRpc: "{{ join_sentry_rpc | default('') }}"
+  validatorRpc: "{{ join_validator_rpc | default('') }}"
+
+network:
+  seeds: "{{ join_seeds | default('') }}"
+  persistentPeers: "{{ persistent_peers_for_join | default('') }}"
+  externalAddress: "{{ validator_external_address | default('') }}"
+
+telemetry:
+  endpoint: "http://otel-collector.monitoring.svc:4317"
+  serviceName: "umesh-validator"

@@ -58,11 +58,18 @@
       register: genesis_check
       tags: [init, sentry]
 
+    - name: Create node config YAML file
+      ansible.builtin.template:
+        src: config-sentry.yaml.j2
+        dest: "{{ umesh_config_path }}"
+        mode: '0600'
+      tags: [config, sentry]
+
     - name: Initialize sentry node
       ansible.builtin.command: >
-        {{ umeshctl_path }} setup init
-        --role sentry
-        --env-file {{ umesh_env_file_dest }}
+        {{ umeshctl_path }} init sentry
+        --config {{ umesh_config_path }}
+        --keyring-password-file {{ keyring_pass_file }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists

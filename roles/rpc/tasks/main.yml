@@ -57,11 +57,18 @@
       register: genesis_check
       tags: [init, rpc]
 
+    - name: Create node config YAML file
+      ansible.builtin.template:
+        src: config-rpc.yaml.j2
+        dest: "{{ umesh_config_path }}"
+        mode: '0600'
+      tags: [config, rpc]
+
     - name: Initialize RPC node
       ansible.builtin.command: >
-        {{ umeshctl_path }} setup init
-        --role rpc
-        --env-file {{ umesh_env_file_dest }}
+        {{ umeshctl_path }} init rpc
+        --config {{ umesh_config_path }}
+        --keyring-password-file {{ keyring_pass_file }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists

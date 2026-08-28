@@ -29,7 +29,6 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 | curl        | Health checks, downloads         |
 | jq          | JSON parsing in shell tasks      |
 | git         | Repository clone                 |
-| just (opt.) | Task runner for manual convenience|
 
 ## 🛠 Role Details
 
@@ -37,9 +36,9 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 
 - Validates OS support (Ubuntu 24/26, Debian 12/13)
 - Installs Docker CE (daemon start + enable)
-- Installs `just`, `jq`, `curl`, `git` via apt
+- Installs `jq`, `curl`, `git` via apt
 - Verifies umesh-node repository exists and umeshctl binary is installed
-- Checks that the Docker image is already built
+- Checks that the Docker image is already pulled
 
 ### common
 
@@ -51,15 +50,17 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 
 ### genesis
 
-- Creates new blockchain via `umeshctl setup plan`
-- Configures validator parameters (commission, stake, moniker)
+- Creates new blockchain via `umeshctl genesis plan --config <genesis-plan.yaml> --keyring-password-file <pass>`
+- Uses downloaded genesis plan YAML from umesh-cli (chain, tokenomics, allocations, modules)
+- Keyring password is passed via `--keyring-password-file` (not in .env)
 - Launches node with `docker compose --profile validator up -d`
 - Verifies block height is increasing
-- **New**: Includes `wasm_memory_cache_size`, `wasm_simulation_gas_limit`, pruning settings
+- **New**: Includes module params (staking, gov, wasm, epochs), soft launch, consensus params
 
 ### validator
 
-- Joins existing blockchain via `umeshctl setup init --role validator`
+- Joins existing blockchain via `umeshctl init validator --config <yaml> --keyring-password-file <pass>`
+- Generates YAML node config from Jinja2 template (`config-validator.yaml.j2`)
 - Downloads genesis.json from configured source
 - Launches node with `docker compose --profile validator up -d`
 - Verifies block height is increasing
@@ -69,7 +70,8 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 ### sentry
 
 - Creates `.env.sentry` from Jinja2 template
-- Runs `umeshctl setup init --role sentry`
+- Generates YAML node config (`config-sentry.yaml.j2`)
+- Runs `umeshctl init sentry --config <yaml> --keyring-password-file <pass>`
 - Launches with `docker compose --profile sentry up -d`
 - Verifies peer count and health
 - **New**: Includes `wasm_memory_cache_size`, `wasm_simulation_gas_limit`, pruning settings
@@ -77,7 +79,8 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 ### rpc
 
 - Creates `.env.rpc` from Jinja2 template
-- Runs `umeshctl setup init --role rpc`
+- Generates YAML node config (`config-rpc.yaml.j2`)
+- Runs `umeshctl init rpc --config <yaml> --keyring-password-file <pass>`
 - Launches with `docker compose --profile rpc up -d`
 - Verifies health and peer count
 - **New**: Includes `wasm_memory_cache_size`, `wasm_simulation_gas_limit`, pruning settings
@@ -138,21 +141,46 @@ ansible-playbook -i inventory.ini roles/backup
 
 ## 📋 Inventory Variables
 
-| Variable                 | Role        | Description                              |
-|--------------------------|-------------|------------------------------------------|
-| `repo_dest`              | common      | Repository clone path (default: /opt/umesh-node) |
-| `docker_image`           | common      | Pre-built Docker image (default: ghcr.io/opscores/umesh-node:latest) |
-| `umeshctl_path`         | common      | umeshctl binary path (default: /usr/local/bin/umeshctl) |
-| `sentinel_ip`            | genesis     | IP of sentry peer for firewall rules     |
-| `genesis_plan_config`    | genesis     | Path to genesis plan YAML config         |
-| `join_genesis_url`       | validator   | Genesis file URL for download            |
-| `persistent_peers_for_join` | validator | Comma-separated peer list               |
-| `validator_node_id`      | sentry      | Validator P2P node ID                    |
-| `validator_ip`           | sentry      | Validator IP                             |
-| `sentry_node_id`         | rpc         | Sentry P2P node ID                       |
-| `sentry_ip`              | rpc         | Sentry IP                                |
-| `backup_dir_base`        | backup      | Base path for backups (default: /opt/umesh-backups) |
-| `backup_retention`       | backup      | Number of backups to keep (default: 7)   |
+| Variable                   | Role      | Description                              |
+|----------------------------|-----------|------------------------------------------|
+| `repo_dest`                | common    | Repository clone path (default: /opt/umesh-node) |
+| `docker_image`             | common    | Pre-built Docker image (default: ghcr.io/opscores/umesh-node:latest) |
+| `umeshctl_version`         | common    | umeshctl release version (default: v0.2.0) |
+| `umeshctl_path`            | common    | umeshctl binary path (default: /usr/local/bin/umeshctl) |
+| `genesis_plan_config`      | common    | Path to genesis plan YAML (downloaded from umesh-cli) |
+| `node_config_dir`          | common    | Node config directory (default: {{ repo_dest }}/config) |
+| `keyring_pass_file`        | common    | Keyring password file path (default: {{ repo_dest }}/.keyring-pass) |
+| `keyring_password`         | common    | Plain-text password written to keyring_pass_file |
+| `umesh_config_path`        | validator/sentry/rpc | Path to rendered YAML node config |
+| `sentinel_ip`              | genesis     | IP of sentry peer for firewall rules     |
+| `join_genesis_url`         | validator   | Genesis file URL for join                |
+| `join_sentry_rpc`          | validator   | Sentry RPC endpoint for join             |
+| `persistent_peers_for_join`| validator   | Comma-separated peer list               |
+| `validator_node_id`        | sentry      | Validator P2P node ID                    |
+| `validator_ip`             | sentry      | Validator IP                             |
+| `sentry_node_id`           | rpc         | Sentry P2P node ID                       |
+| `sentry_ip`                | rpc         | Sentry IP                                |
+| `backup_dir_base`          | backup      | Base path for backups (default: /opt/umesh-backups) |
+| `backup_retention`         | backup      | Number of backups to keep (default: 7)   |
+
+### `.env` Files (Docker Compose Only)
+
+Starting with umeshctl v0.2.0, `.env` files contain **only docker-compose interpolation variables** (ports, resources, image tag). Node initialization parameters that used to live in `.env` (chain ID, moniker, genesis URL, KEYRING_PASSWORD, etc.) have moved to the **YAML node config** files. Secrets are passed separately via `--keyring-password-file`.
+
+### Node Config (YAML)
+
+Starting with umeshctl v0.2.0, node initialization uses a **typed YAML config file** (not `.env`). The collection renders these configs from Jinja2 templates for `umeshctl init <role> --config <yaml> --keyring-password-file <pass>`:
+
+| Role      | Template                   | Output                          |
+|-----------|----------------------------|---------------------------------|
+| genesis†  | `config-genesis.yaml.j2`   | `{{ node_config_dir }}/node-genesis.yaml`   |
+| validator | `config-validator.yaml.j2` | `{{ node_config_dir }}/node-validator.yaml` |
+| sentry    | `config-sentry.yaml.j2`    | `{{ node_config_dir }}/node-sentry.yaml`    |
+| rpc       | `config-rpc.yaml.j2`       | `{{ node_config_dir }}/node-rpc.yaml`       |
+
+† The genesis role normally uses `umeshctl genesis plan` (Plan YAML), not `umeshctl init genesis`. The genesis node config template is provided for manual/advanced genesis via `umeshctl init genesis`.
+
+Secrets (keyring password) are **never** stored in the YAML config — they're passed separately via `--keyring-password-file {{ keyring_pass_file }}`.
 
 ## ⚙️ Role Variables (Cosmos SDK Settings)
 

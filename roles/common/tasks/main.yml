@@ -99,3 +99,19 @@
     mode: '0644'
   register: genesis_plan_download
   tags: [build, cli]
+
+# Prepare node config directory and keyring password file for umeshctl v0.2.0.
+# umeshctl init requires a YAML config file (not .env) and keyring password via --keyring-password-file.
+- name: Ensure node config directory exists
+  ansible.builtin.file:
+    path: "{{ node_config_dir }}"
+    state: directory
+    mode: '0755'
+  tags: [config]
+
+- name: Create keyring password file
+  ansible.builtin.copy:
+    content: "{{ keyring_password }}"
+    dest: "{{ keyring_pass_file }}"
+    mode: '0600'
+  tags: [config]

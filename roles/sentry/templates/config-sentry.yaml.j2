@@ -1,0 +1,37 @@
+# ============================================================
+# Node configuration for a sentry node (public P2P/RPC gateway)
+# Used by: umeshctl init sentry --config {{ umesh_config_path }} --keyring-password-file {{ keyring_pass_file }}
+# ============================================================
+# Secrets (keyring password) are passed separately via --keyring-password-file.
+
+apiVersion: umesh.network/v1
+kind: Node
+role: sentry
+
+node:
+  dataDir: ./{{ data_dir }}
+  moniker: {{ moniker }}
+  environment: {{ environment | default('production') }}
+  pruning: {{ pruning_strategy | default('custom') }}
+
+chain:
+  chainId: {{ chain_id }}
+  denom: {{ denom }}
+  minGasPrice: "{{ min_gas_price }}"
+
+join:
+  genesisUrl: "{{ genesis_url | default('') }}"
+  genesisSha256: "{{ genesis_sha256 | default('') }}"
+  # sentry can use validatorRpc to fetch genesis and resolve validator NodeID for usePrivate
+  validatorRpc: "{{ validator_rpc | default('') }}"
+  sentryRpc: "{{ sentry_rpc | default('http://127.0.0.1:26657') }}"
+
+network:
+  seeds: "{{ seeds | default('') }}"
+  persistentPeers: "{{ persistent_peers | default('') }}"
+  externalAddress: "{{ sentry_external_address | default('') }}"
+  usePrivate: {{ 'true' if use_private | default('false') == 'true' else 'false' }}
+
+telemetry:
+  endpoint: "http://otel-collector.monitoring.svc:4317"
+  serviceName: "umesh-sentry"

@@ -5,4 +5,5 @@
 umesh_data_path: "{{ repo_dest }}/{{ data_dir }}"
 umesh_env_file_dest: "{{ repo_dest }}/.env.validator"
 umesh_validator_config_dir: "{{ umesh_data_path }}/config"
-umesh_validator_binary: "/usr/local/bin/umeshd"
+umesh_validator_binary: "/usr/local/bin/umeshnode"
+umesh_config_path: "{{ node_config_dir }}/node-validator.yaml"

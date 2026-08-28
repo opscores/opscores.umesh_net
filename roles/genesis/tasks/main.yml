@@ -76,9 +76,9 @@
 
     - name: Run genesis plan setup
       ansible.builtin.command: >
-        {{ umeshctl_path }} setup plan
+        {{ umeshctl_path }} genesis plan
         --config {{ genesis_plan_config }}
-        --env-file {{ umesh_env_file_dest }}
+        --keyring-password-file {{ keyring_pass_file }}
       args:
         chdir: "{{ repo_dest }}"
       when: not genesis_check.stat.exists
