@@ -25,14 +25,14 @@ repo_dest: /opt/umesh-node
 
 # umeshctl — release binary downloaded from the umesh-cli repository.
 # No Go toolchain or `just build-cli` required on the target host.
-umeshctl_version: v0.2.0
+umeshctl_version: v0.1.0
 umeshctl_path: /usr/local/bin/umeshctl
 umeshcli_repo: https://github.com/opscores/umesh-cli
 
 # Genesis plan YAML (downloaded from umesh-cli examples during common setup)
 genesis_plan_config: "{{ repo_dest }}/genesis-plan.yaml"
 
-# Node config directory and keyring password file (used by umeshctl init — v0.2.0 API)
+# Node config directory and keyring password file (used by umeshctl init)
 node_config_dir: "{{ repo_dest }}/config"
 keyring_pass_file: "{{ repo_dest }}/.keyring-pass"
 keyring_password: "change-me-secure"

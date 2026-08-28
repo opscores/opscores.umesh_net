@@ -145,7 +145,7 @@ ansible-playbook -i inventory.ini roles/backup
 |----------------------------|-----------|------------------------------------------|
 | `repo_dest`                | common    | Repository clone path (default: /opt/umesh-node) |
 | `docker_image`             | common    | Pre-built Docker image (default: ghcr.io/opscores/umesh-node:latest) |
-| `umeshctl_version`         | common    | umeshctl release version (default: v0.2.0) |
+| `umeshctl_version`         | common    | umeshctl release version (default: v0.1.0) |
 | `umeshctl_path`            | common    | umeshctl binary path (default: /usr/local/bin/umeshctl) |
 | `genesis_plan_config`      | common    | Path to genesis plan YAML (downloaded from umesh-cli) |
 | `node_config_dir`          | common    | Node config directory (default: {{ repo_dest }}/config) |
@@ -165,11 +165,11 @@ ansible-playbook -i inventory.ini roles/backup
 
 ### `.env` Files (Docker Compose Only)
 
-Starting with umeshctl v0.2.0, `.env` files contain **only docker-compose interpolation variables** (ports, resources, image tag). Node initialization parameters that used to live in `.env` (chain ID, moniker, genesis URL, KEYRING_PASSWORD, etc.) have moved to the **YAML node config** files. Secrets are passed separately via `--keyring-password-file`.
+Starting with the v0.1.0 release of umeshctl (new command structure), `.env` files contain **only docker-compose interpolation variables** (ports, resources, image tag). Node initialization parameters that used to live in `.env` (chain ID, moniker, genesis URL, KEYRING_PASSWORD, etc.) have moved to the **YAML node config** files. Secrets are passed separately via `--keyring-password-file`.
 
 ### Node Config (YAML)
 
-Starting with umeshctl v0.2.0, node initialization uses a **typed YAML config file** (not `.env`). The collection renders these configs from Jinja2 templates for `umeshctl init <role> --config <yaml> --keyring-password-file <pass>`:
+Starting with the v0.1.0 release of umeshctl (new command structure), node initialization uses a **typed YAML config file** (not `.env`). The collection renders these configs from Jinja2 templates for `umeshctl init <role> --config <yaml> --keyring-password-file <pass>`:
 
 | Role      | Template                   | Output                          |
 |-----------|----------------------------|---------------------------------|
