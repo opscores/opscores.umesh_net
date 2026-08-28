@@ -54,7 +54,7 @@
   when: firewall_enabled
   tags: [firewall, genesis]
 
-# Create .env file (BEFORE setup plan!)
+# Create .env file (BEFORE genesis plan!)
 # NOTE: docker-compose.yml hardcodes env_file: .env.validator for the
 # validator service, so genesis writes to .env.validator (MINSTART.md 3.3).
 - name: Create .env.validator file from genesis template
@@ -65,7 +65,7 @@
   notify: "restart validator node"
   tags: [config, genesis]
 
-# Wrapped setup plan and launch with error handling
+# Run genesis plan and launch with error handling
 - name: Initialize and launch genesis
   block:
     - name: Check if genesis is already initialized
