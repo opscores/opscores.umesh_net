@@ -122,7 +122,7 @@
     - git_version is failed
 
 # Repository check
-- name: Check node-umesh repository exists
+- name: Check umesh-node repository exists
   ansible.builtin.stat:
     path: "{{ repo_dest }}"
   register: repo_dir
@@ -139,22 +139,22 @@
 
 - name: Check umeshctl binary exists
   ansible.builtin.stat:
-    path: "{{ repo_dest }}/tools/umeshctl/umeshctl"
+    path: "{{ umeshctl_path }}"
   register: umeshctl_binary
-  when: preflight_checks.repository
-  tags: [preflight, repo]
+  when: preflight_checks.umeshctl
+  tags: [preflight, cli]
 
 - name: Fail if umeshctl binary is missing
   ansible.builtin.fail:
-    msg: "umeshctl binary not found at {{ repo_dest }}/tools/umeshctl/. Run 'just build-cli' in {{ repo_dest }}."
+    msg: "umeshctl binary not found at {{ umeshctl_path }}. Ensure the 'common' role has run to download it from the umesh-cli releases."
   when:
-    - preflight_checks.repository
+    - preflight_checks.umeshctl
     - not umeshctl_binary.stat.exists
-  tags: [preflight, repo]
+  tags: [preflight, cli]
 
 # Docker image check
-- name: Check Docker image is built
-  ansible.builtin.command: "docker image inspect {{ docker_image_tag }}:{{ docker_image_version }}"
+- name: Check Docker image is present locally
+  ansible.builtin.command: "docker image inspect {{ docker_image }}"
   register: docker_image_check
   changed_when: false
   failed_when: false
@@ -163,10 +163,10 @@
 
 - name: Fail if Docker image is not found
   ansible.builtin.fail:
-    msg: "Docker image {{ docker_image_tag }}:{{ docker_image_version }} not found. Build it with: docker build -t {{ docker_image_tag }}:{{ docker_image_version }} -f Dockerfile . from {{ repo_dest }}."
+    msg: "Docker image {{ docker_image }} not found. Pull it with: docker pull {{ docker_image }}"
   when:
     - preflight_checks.docker
-    - docker_image_check is failed
+    - docker_image_check.rc != 0
   tags: [preflight, docker]
 
 # Summary

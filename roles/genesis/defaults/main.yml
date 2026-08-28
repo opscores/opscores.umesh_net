@@ -19,8 +19,8 @@ pruning_strategy: "custom"
 pruning_keep_recent: 1000
 pruning_interval: 100
 
-# Genesis plan config path - internal constant
-genesis_plan_config: "{{ repo_dest }}/tools/umeshctl/examples/genesis-plan.yaml"
+# Genesis plan config path — downloaded by the common role from umesh-cli
+genesis_plan_config: "{{ repo_dest }}/genesis-plan.yaml"
 
 # Validator parameters - these can be overridden by user
 stake_amount: 1000000000000

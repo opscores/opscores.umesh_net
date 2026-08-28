@@ -1,6 +1,6 @@
 ---
 # RPC role defaults
-# Corresponds to .env.rpc.example from the node-umesh project
+# Corresponds to .env.rpc.example from the umesh-node project
 
 node_mode: rpc
 chain_id: umesh-testnet-1

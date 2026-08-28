@@ -1,6 +1,6 @@
 ---
 # Sentry role defaults
-# Corresponds to .env.sentry.example from the node-umesh project
+# Corresponds to .env.sentry.example from the umesh-node project
 
 node_mode: sentry
 chain_id: umesh-testnet-1

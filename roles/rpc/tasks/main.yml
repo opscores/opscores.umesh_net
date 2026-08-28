@@ -59,7 +59,7 @@
 
     - name: Initialize RPC node
       ansible.builtin.command: >
-        {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+        {{ umeshctl_path }} setup init
         --role rpc
         --env-file {{ umesh_env_file_dest }}
       args:

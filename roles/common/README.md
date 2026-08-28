@@ -1,18 +1,18 @@
 # Common Role
 
-Repository handling, image building, and CLI compilation for Umesh nodes.
+Repository handling, Docker image pulling, and CLI download for Umesh nodes.
 
 ## Requirements
 - Ubuntu 24.04+ or Debian 12+
 - Git
-- Go (for building umeshctl)
+- Docker (for containerized node runtime)
 
 ## Role Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `repo_url` | `https://github.com/umesh-network/umesh-node` | Node repository URL |
-| `repo_dest` | `{{ ansible_tmpdir }}/umesh-node` | Destination path for cloned repository |
+| `repo_url` | `https://github.com/opscores/umesh-node` | Node repository URL |
+| `repo_dest` | `/opt/umesh-node` | Destination path for cloned repository |
 
 ## Example Playbook
 

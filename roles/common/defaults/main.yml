@@ -7,19 +7,27 @@ supported_os:
   - { name: 'Ubuntu', versions: ['24', '26'] }
   - { name: 'Debian', versions: ['12', '13'] }
 
-# Docker image.
-# Tag matches NODE_IMAGE=umesh-node:latest in docker-compose.yml / .env files.
-# docker_build_version is passed as the VERSION build-arg (see justfile build-image).
-docker_image_tag: umesh-node
-docker_image_version: latest
-docker_build_version: dev
-docker_src_provider: src-provider-umeshprep
+# Docker image (pre-built, pulled from GHCR — no local build needed)
+docker_image_registry: ghcr.io/opscores
+docker_image_name: umesh-node
+docker_image_tag: latest
+# Computed full image reference: used in .env templates and `docker pull`
+docker_image: "{{ docker_image_registry }}/{{ docker_image_name }}:{{ docker_image_tag }}"
 
 # Firewall
 firewall_enabled: true
 firewall_ssh_port: 22
 
-# Repository
-repo_url: https://github.com/opscores/node-umesh.git
+# Repository (node source: docker-compose.yml, .env templates, data dirs)
+repo_url: https://github.com/opscores/umesh-node.git
 repo_branch: dev
-repo_dest: /opt/node-umesh
+repo_dest: /opt/umesh-node
+
+# umeshctl — release binary downloaded from the umesh-cli repository.
+# No Go toolchain or `just build-cli` required on the target host.
+umeshctl_version: v0.1.0
+umeshctl_path: /usr/local/bin/umeshctl
+umeshcli_repo: https://github.com/opscores/umesh-cli
+
+# Genesis plan YAML (downloaded from umesh-cli examples during common setup)
+genesis_plan_config: "{{ repo_dest }}/genesis-plan.yaml"

@@ -72,10 +72,10 @@
       register: genesis_check
       tags: [init, validator]
 
-    - name: Initialize validator node (join mode)
+    - name: Initialize validator node
       ansible.builtin.command: >
-        {{ repo_dest }}/tools/umeshctl/umeshctl setup init
-        --role join
+        {{ umeshctl_path }} setup init
+        --role validator
         --env-file {{ umesh_env_file_dest }}
       args:
         chdir: "{{ repo_dest }}"

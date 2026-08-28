@@ -22,7 +22,7 @@
     mode: '0755'
   tags: [repo, install]
 
-- name: Clone node-umesh repository
+- name: Clone umesh-node repository
   ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ repo_dest }}"
@@ -41,50 +41,61 @@
     mode: '0755'
   tags: [repo, install]
 
-- name: Get current commit hash for build
-  ansible.builtin.command: "git -C {{ repo_dest }} rev-parse --short HEAD"
-  register: git_commit_hash
-  changed_when: false
-  tags: [repo, build]
-
-# Build Docker image (section 2.4, mirrors `just build-image`).
-# Only rebuild when the repo was updated or the image is missing.
-- name: Check if Docker image already exists
-  ansible.builtin.command: >
-    docker images -q {{ docker_image_tag }}:{{ docker_image_version }}
+# Pull Docker image from GHCR (pre-built, no local build needed).
+# Only pull when the image is not yet present locally.
+- name: Check if Docker image is already present
+  ansible.builtin.command: "docker image inspect {{ docker_image }}"
   register: docker_image_exists
   changed_when: false
   failed_when: false
   tags: [build, docker]
 
-- name: Build Docker image
-  ansible.builtin.command: >
-    docker build --pull
-    --build-arg VERSION={{ docker_build_version }}
-    --build-arg COMMIT={{ git_commit_hash.stdout }}
-    --build-arg SRC_PROVIDER={{ docker_src_provider }}
-    -t {{ docker_image_tag }}:{{ docker_image_version }}
-    -f Dockerfile .
-  args:
-    chdir: "{{ repo_dest }}"
-  when: git_clone_result.changed or (docker_image_exists.stdout | length == 0)
-  register: docker_build_result
-  changed_when: docker_build_result.rc == 0
+- name: Pull Docker image from registry
+  ansible.builtin.command: "docker pull {{ docker_image }}"
+  register: docker_pull_result
+  changed_when: docker_pull_result.rc == 0
+  when: docker_image_exists.rc != 0
   tags: [build, docker]
 
-# Build umeshctl (section 2.5, mirrors `just build-cli`).
-# The script auto-detects local Go or falls back to Docker.
-- name: Check if umeshctl binary exists
-  ansible.builtin.stat:
-    path: "{{ repo_dest }}/tools/umeshctl/umeshctl"
-  register: umeshctl_binary
+# Download umeshctl release binary from the umesh-cli repository.
+# No Go toolchain or `just build-cli` is required on the target host.
+- name: Ensure umeshctl binary directory exists
+  ansible.builtin.file:
+    path: "{{ umeshctl_path | dirname }}"
+    state: directory
+    mode: '0755'
   tags: [build, cli]
 
-- name: Build umeshctl CLI tool
-  ansible.builtin.command: just build-cli
-  args:
-    chdir: "{{ repo_dest }}"
-  when: git_clone_result.changed or not umeshctl_binary.stat.exists
-  register: build_cli_result
-  changed_when: build_cli_result.rc == 0
+- name: Download umeshctl sha256 checksum
+  ansible.builtin.get_url:
+    url: "{{ umeshcli_repo }}/releases/download/{{ umeshctl_version }}/umeshctl.sha256"
+    dest: "{{ repo_dest }}/.umeshctl.sha256"
+  tags: [build, cli]
+
+- name: Parse umeshctl sha256 hash
+  ansible.builtin.command: "cut -d ' ' -f1 {{ repo_dest }}/.umeshctl.sha256"
+  register: umeshctl_sha256_hash
+  changed_when: false
+  tags: [build, cli]
+
+- name: Download umeshctl binary
+  ansible.builtin.get_url:
+    url: "{{ umeshcli_repo }}/releases/download/{{ umeshctl_version }}/umeshctl"
+    dest: "{{ umeshctl_path }}"
+    mode: '0755'
+    checksum: "sha256:{{ umeshctl_sha256_hash.stdout }}"
+  tags: [build, cli]
+
+- name: Verify umeshctl binary
+  ansible.builtin.command: "{{ umeshctl_path }} version"
+  changed_when: false
+  tags: [build, cli]
+
+# Download the genesis plan YAML from umesh-cli examples.
+- name: Download genesis plan config
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/opscores/umesh-cli/{{ umeshctl_version }}/examples/genesis-plan.yaml"
+    dest: "{{ genesis_plan_config }}"
+    mode: '0644'
+  register: genesis_plan_download
   tags: [build, cli]

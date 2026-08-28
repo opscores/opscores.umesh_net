@@ -7,7 +7,7 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 ## 📦 Structure
 
 - `roles/preflight` - Pre-flight checks and installation of all prerequisites (Docker, just, jq, curl, git)
-- `roles/common` - Common setup tasks shared by all node types (repo clone, Docker image build, umeshctl build)
+- `roles/common` - Common setup tasks shared by all node types (repo clone, Docker image pull, umeshctl download)
 - `roles/backup` - **New**: Role for creating backups of validator/sentry keys and configuration
 - `roles/genesis` - Genesis validator role (creates a new blockchain)
 - `roles/validator` - Validator role (joins an existing blockchain)
@@ -26,10 +26,10 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 | Package     | Purpose                          |
 |-------------|----------------------------------|
 | docker-ce   | Container runtime                |
-| just        | Task runner (umeshctl + compose) |
 | curl        | Health checks, downloads         |
 | jq          | JSON parsing in shell tasks      |
 | git         | Repository clone                 |
+| just (opt.) | Task runner for manual convenience|
 
 ## 🛠 Role Details
 
@@ -38,15 +38,16 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 - Validates OS support (Ubuntu 24/26, Debian 12/13)
 - Installs Docker CE (daemon start + enable)
 - Installs `just`, `jq`, `curl`, `git` via apt
-- Verifies node-umesh repository and umeshctl binary exist
+- Verifies umesh-node repository exists and umeshctl binary is installed
 - Checks that the Docker image is already built
 
 ### common
 
 - Validates OS support
-- Clones the `node-umesh` repository
-- Builds the Docker image (`umesh-node:{version}`)
-- Builds `umeshctl` via `just build-cli`
+- Clones the `umesh-node` repository
+- Pulls the Docker image (`ghcr.io/opscores/umesh-node:latest`) from GHCR
+- Downloads `umeshctl` release binary from the [umesh-cli](https://github.com/opscores/umesh-cli) repository
+- Downloads the genesis plan YAML from umesh-cli examples
 
 ### genesis
 
@@ -58,7 +59,7 @@ Supports **Ubuntu 24/26** and **Debian 12/13** only.
 
 ### validator
 
-- Joins existing blockchain via `umeshctl setup init --role join`
+- Joins existing blockchain via `umeshctl setup init --role validator`
 - Downloads genesis.json from configured source
 - Launches node with `docker compose --profile validator up -d`
 - Verifies block height is increasing
@@ -139,6 +140,9 @@ ansible-playbook -i inventory.ini roles/backup
 
 | Variable                 | Role        | Description                              |
 |--------------------------|-------------|------------------------------------------|
+| `repo_dest`              | common      | Repository clone path (default: /opt/umesh-node) |
+| `docker_image`           | common      | Pre-built Docker image (default: ghcr.io/opscores/umesh-node:latest) |
+| `umeshctl_path`         | common      | umeshctl binary path (default: /usr/local/bin/umeshctl) |
 | `sentinel_ip`            | genesis     | IP of sentry peer for firewall rules     |
 | `genesis_plan_config`    | genesis     | Path to genesis plan YAML config         |
 | `join_genesis_url`       | validator   | Genesis file URL for download            |

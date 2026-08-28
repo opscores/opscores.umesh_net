@@ -60,7 +60,7 @@
 
     - name: Initialize sentry node
       ansible.builtin.command: >
-        {{ repo_dest }}/tools/umeshctl/umeshctl setup init
+        {{ umeshctl_path }} setup init
         --role sentry
         --env-file {{ umesh_env_file_dest }}
       args:

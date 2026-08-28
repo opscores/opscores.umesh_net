@@ -4,8 +4,9 @@
 
 preflight_checks:
   docker: true
-  just: true
+  just: false  # no longer needed: umeshctl is a release binary, docker image is from GHCR
   jq: true
   curl: true
   git: true
   repository: true
+  umeshctl: true

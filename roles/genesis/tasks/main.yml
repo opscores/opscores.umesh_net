@@ -76,7 +76,7 @@
 
     - name: Run genesis plan setup
       ansible.builtin.command: >
-        {{ repo_dest }}/tools/umeshctl/umeshctl setup plan
+        {{ umeshctl_path }} setup plan
         --config {{ genesis_plan_config }}
         --env-file {{ umesh_env_file_dest }}
       args:
